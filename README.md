@@ -4,7 +4,7 @@
 ### Create env
 Download anaconda and create the new enviroment
 ~~~
-conda create --name dlmpc python=3.9
+conda create --name lmpc python=3.9
 ~~~
 ### Activate env
 You need to activate the environment and install all requierements
