@@ -37,7 +37,7 @@ class DistributedLTI(SystemModel):
   def __lshift__(self, locality_model: LocalityModel):
     ''' Overload lshift to augment the SystemModel with the LocalityModel'''
     self.locality_model = locality_model
-    self._outgoing_sets = self.locality_model.computeOutgoingSets(self._topology)
+    self._outgoing_sets, self._cG = self.locality_model.computeOutgoingSets(self._topology)
 
 
   def loadAB(self, A: np.ndarray, B: np.ndarray) -> None:
