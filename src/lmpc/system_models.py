@@ -1,8 +1,9 @@
 import numpy as np
 import networkx as nx
-from typing import List, Union
+from typing import List, Optional, Union
 
-from .core import SystemModel, LocalityModel
+from lmpc.core import SystemModel, LocalityModel
+from lmpc.constraints import SLSConstraint, LocalityConstraint
 
 
 class DistributedLTI(SystemModel):
@@ -10,7 +11,8 @@ class DistributedLTI(SystemModel):
   def __init__(self, N: int,
                     Ns: Union[int, List[int]],
                     Na: Union[int, List[int]]):
-
+    
+    super().__init__()
     # all subsystems have same number of states
     if isinstance(Ns, int):
       Ns = [Ns for _ in range(N)]
@@ -36,8 +38,9 @@ class DistributedLTI(SystemModel):
 
   def __lshift__(self, locality_model: LocalityModel):
     ''' Overload lshift to augment the SystemModel with the LocalityModel'''
+    assert isinstance(locality_model, LocalityModel), f"{locality_model} isnt of type LocalityModel"
     self.locality_model = locality_model
-    self._outgoing_sets, self._cG = self.locality_model.computeOutgoingSets(self._topology)
+    self.locality_model.computeOutgoingSets(self._topology)
 
 
   def loadAB(self, A: np.ndarray, B: np.ndarray) -> None:
@@ -76,9 +79,36 @@ class DistributedLTI(SystemModel):
     _topology.add_edges_from(edges)
     return _topology
 
+  def step(self, u: np.ndarray, w: Optional[np.ndarray]=None) -> np.ndarray:
+    ''' Propagate current state with action u '''
+    assert u.shape[0] == self.B.shape[1], "dim 0 of u doesnt match dim 1 of B"
+    assert w is None or w.shape == self._x.shape, "shape of w doesnt match shape of _x"
+    
+    xp = self.A @ self._x + self.B @ u
+    if w is not None:
+      xp += w
+    return xp
+
+  def getSLSConstraint(self, T:int) -> SLSConstraint:
+    ''' Construct the SLS constraint in form ZAB @ phi == I '''
+    Nx, Nu = self.Nx, self.Nu
+    I = np.eye(Nx*(T+1))
+    Z = np.eye(Nx*T)                                          # (NX*T, NX*T)
+    Z = np.concatenate((Z, np.zeros((Nx*T, Nx))), axis=1)     # (NX*T, NX*(T+1))
+    Z = np.concatenate((np.zeros((Nx, Nx*(T+1))), Z), axis=0) # (NX*(T+1), NX*(T+1))                                                                             
+    Aa = np.kron(np.eye(T+1, dtype=int), self.A)              # (NX*(T+1), NX*(T+1))
+    Bb = np.kron(np.eye(T+1, dtype=int), self.B)              # (NX*(T+1), NU*(T+1))
+    Bb = Bb[:, :-Nu]                                          # (NX*(T+1), NU*T)                                    
+    IZA = I - Z @ Aa                                          # (NX*(T+1), NX*(T+1))
+    ZB = -Z @ Bb                                              # (NX*(T+1), NU*T)
+    ZAB = np.concatenate((IZA, ZB), axis=1)                   # (NX*(T+1), NX*(T+1)+NU*T)
+    return SLSConstraint(ZAB, Nx, T)
+
+  def getLocalityConstraint(self, T: int) -> LocalityConstraint:
+    ''' Construct LocalityConstraint '''
+    return LocalityConstraint(T, self.N, self.Nx, self.Nu, self.Ns, self.Na, self._idx, self._idu, self.locality_model)
 
   def sanityCheck(self):
-
     if len(self.Ns) != self.N: self.errorMessage("len(self.Ns) != self.N")
     if len(self.Na) != self.N: self.errorMessage("len(self.Na) != self.N")
     
