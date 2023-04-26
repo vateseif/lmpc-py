@@ -2,8 +2,8 @@ import numpy as np
 import networkx as nx
 from typing import List, Optional, Union
 
-from lmpc.core import SystemModel, LocalityModel
-from lmpc.constraints import SLSConstraint, LocalityConstraint
+from src.lmpc.core import SystemModel, LocalityModel
+from src.lmpc.constraints import SLSConstraint, LocalityConstraint
 
 
 class DistributedLTI(SystemModel):

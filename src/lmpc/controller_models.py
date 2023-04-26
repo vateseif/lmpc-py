@@ -1,11 +1,11 @@
 import numpy as np
 import cvxpy as cp
-from typing import List
+from typing import List, Tuple
 
-from lmpc.constraints import LMPCConstraint
-from lmpc.objectives import LMPCObjectiveFun
-from lmpc.system_models import DistributedLTI
-from lmpc.core import ControllerModel, ObjectiveFunc, Constraint
+from src.lmpc.constraints import LMPCConstraint
+from src.lmpc.objectives import LMPCObjectiveFun
+from src.lmpc.system_models import DistributedLTI
+from src.lmpc.core import ControllerModel, ObjectiveFunc, Constraint
 
 
 class LMPC(ControllerModel):
@@ -33,13 +33,17 @@ class LMPC(ControllerModel):
     assert isinstance(con, LMPCConstraint), "constraint not of type LMPCConstraint"
     self.constraints.append(con)
 
+  def removeConstraintOfType(self, con_type: LMPCConstraint):
+    # TODO
+    return
+
   def _applyConstraints(self, x0: np.ndarray, phi: cp.Variable) -> List:  
     ''' Returns list of cvxpy constraints'''
     Nx, Nu, T = self.model.Nx, self.model.Nu, self.T
     # apply constraints stored in self.constraints
     constraints = []
     for con in self.constraints:
-      constraints += con.compute(phi)
+      constraints += con.compute(self.T, x0, phi)
     # block lower triangular constraints
     phi_x = phi[:Nx*(T+1)]
     phi_u = phi[Nx*(T+1):]
@@ -54,11 +58,11 @@ class LMPC(ControllerModel):
     objective = sum([obj.compute(self.T, x0, phi) for obj in self.objectives])
     return cp.Minimize(objective)
 
-  def solve(self, x0: np.ndarray) -> np.ndarray:
+  def solve(self, x0: np.ndarray) -> Tuple[np.ndarray, float]:
     ''' Solve the MPC problem and return u0 if solution is optimal else raise'''
     Nx, Nu, T = self.model.Nx, self.model.Nu, self.T
     # define optim variables
-    phi = cp.Variable((Nx*(T+1)+Nu*T, Nx*(T+1)))
+    phi = cp.Variable((Nx*(T+1)+Nu*T, Nx*(T+1))) #TODO check if 2nd dim can be Nx only
     # solve
     prob = cp.Problem(
       self._applyObjective(x0, phi),
@@ -68,4 +72,4 @@ class LMPC(ControllerModel):
     if st := (prob.status != "optimal"): raise(f"Solution not found. status: {st}")
     # store results
     u0 = phi.value[Nx*(T+1):Nx*(T+1)+Nu, :Nx] @ x0 # (Nu, 1)
-    return u0
+    return u0, prob.value

@@ -1,15 +1,13 @@
-
 import numpy as np
 import cvxpy as cp
 from typing import Optional
 
-from lmpc.core import ObjectiveFunc
+from src.lmpc.core import ObjectiveFunc
 
 class LMPCObjectiveFun(ObjectiveFunc):
 
   def compute(self, 
               T: int,
-              N: int,
               x0: np.ndarray,
               phi: cp.Variable):
     pass
