@@ -1,5 +1,6 @@
 import inspect
 import numpy as np
+from abc import abstractmethod
 
 class ObjBase:
   '''
@@ -28,8 +29,9 @@ class LocalityModel(ObjBase):
   def __init__(self) -> None:
     pass
 
-  def computeCommunicationGraph():
-    return
+  @abstractmethod
+  def computeOutgoingSets():
+    pass
 
 
 class SystemModel(ObjBase):
@@ -39,11 +41,6 @@ class SystemModel(ObjBase):
   def __init__(self) -> None:
     self._x = np.empty([0])
 
-  # overload the lshift operator to enhance model with LocalityModel
-  def __lshift__ (self, locality_model: LocalityModel):
-    assert isinstance(locality_model, LocalityModel), "locality_model is not of type LocalityModel"
-    self.locality_model = locality_model
-    return self
 
   def getState(self) -> np.ndarray:
     return self._x.copy()
@@ -57,8 +54,9 @@ class ControllerModel(ObjBase):
   def __init__(self) -> None:
     return
 
-  def solve(x0: np.ndarray) -> np.ndarray:
-    return None
+  @abstractmethod
+  def solve(self, x0: np.ndarray) -> np.ndarray:
+    pass
 
 
 
