@@ -18,7 +18,7 @@ class LMPC(ControllerModel):
     self.objectives: List[ObjectiveFunc] = [] 
 
   def __lshift__(self, model: DistributedLTI):
-    ''' Overload lshift to augment the SystemModel with the LocalityModel'''
+    ''' Overload lshift to augment the ControllerModel with the DistributedLTI'''
     assert isinstance(model, DistributedLTI), f"{model} isnt of type DistributedLTI"
     assert model.locality_model != None, f"{model} doesnt have any locality_model"
     self.model = model
