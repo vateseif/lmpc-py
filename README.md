@@ -1,4 +1,4 @@
-# dlmpc-py
+# lmpc-py
 
 ## Python environment
 ### Create env
