@@ -2,8 +2,8 @@ import numpy as np
 import networkx as nx
 from typing import List, Optional, Union
 
+from src.lmpc.constraints import *
 from src.lmpc.core import SystemModel, LocalityModel
-from src.lmpc.constraints import SLSConstraint, LocalityConstraint
 
 
 class DistributedLTI(SystemModel):
@@ -102,11 +102,15 @@ class DistributedLTI(SystemModel):
     IZA = I - Z @ Aa                                          # (NX*(T+1), NX*(T+1))
     ZB = -Z @ Bb                                              # (NX*(T+1), NU*T)
     ZAB = np.concatenate((IZA, ZB), axis=1)                   # (NX*(T+1), NX*(T+1)+NU*T)
-    return SLSConstraint(ZAB, Nx, T)
+    return SLSConstraint(ZAB, Nx)
 
   def getLocalityConstraint(self, T: int) -> LocalityConstraint:
     ''' Construct LocalityConstraint '''
     return LocalityConstraint(T, self.N, self.Nx, self.Nu, self.Ns, self.Na, self._idx, self._idu, self.locality_model)
+
+  def getLowerTriangularConstraint(self, T:int):
+    ''' Construct LowerTriangularConsstraints'''
+    return LowerTriangulatConstraint(self.Nx, self.Nu)
 
   def sanityCheck(self):
     if len(self.Ns) != self.N: self.errorMessage("len(self.Ns) != self.N")

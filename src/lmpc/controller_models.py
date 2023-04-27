@@ -24,6 +24,7 @@ class LMPC(ControllerModel):
     self.model = model
     self.addConstraint(self.model.getSLSConstraint(self.T))
     self.addConstraint(self.model.getLocalityConstraint(self.T))
+    self.addConstraint(self.model.getLowerTriangularConstraint(self.T))
 
   def addObjectiveFun(self, obj_fun: LMPCObjectiveFun):
     assert isinstance(obj_fun, LMPCObjectiveFun), "objective function not of type LMPCObjectiveFun"
@@ -34,23 +35,16 @@ class LMPC(ControllerModel):
     self.constraints.append(con)
 
   def removeConstraintOfType(self, con_type: LMPCConstraint):
-    # TODO
+    ''' Remove constraints of con_type '''
+    self.constraints = [c for c in self.constraints if not isinstance(c, con_type)]
     return
 
   def _applyConstraints(self, x0: np.ndarray, phi: cp.Variable) -> List:  
     ''' Returns list of cvxpy constraints'''
-    Nx, Nu, T = self.model.Nx, self.model.Nu, self.T
     # apply constraints stored in self.constraints
     constraints = []
     for con in self.constraints:
       constraints += con.compute(self.T, x0, phi)
-    # block lower triangular constraints
-    phi_x = phi[:Nx*(T+1)]
-    phi_u = phi[Nx*(T+1):]
-    for i in range(T-1):
-      constraints += [phi_x[Nx*i:Nx*(i+1), Nx*(i+1):] == np.zeros((Nx, Nx*(T-i)))]
-      if i < T-2: # u has 1 less time step
-        constraints += [phi_u[Nu*i:Nu*(i+1), Nx*(i+1):] == np.zeros((Nu, Nx*(T-i)))]
     return constraints
 
   def _applyObjective(self, x0: np.ndarray, phi: cp.Variable):
@@ -61,15 +55,16 @@ class LMPC(ControllerModel):
   def solve(self, x0: np.ndarray) -> Tuple[np.ndarray, float]:
     ''' Solve the MPC problem and return u0 if solution is optimal else raise'''
     Nx, Nu, T = self.model.Nx, self.model.Nu, self.T
+    assert x0.shape[0]==Nx or x0.shape[0]==Nx*(T+1), "x0 dim neither Nx not Nx*(T+1)"
     # define optim variables
-    phi = cp.Variable((Nx*(T+1)+Nu*T, Nx*(T+1))) #TODO check if 2nd dim can be Nx only
+    phi = cp.Variable((Nx*(T+1)+Nu*T, x0.shape[0]))
     # solve
     prob = cp.Problem(
       self._applyObjective(x0, phi),
       self._applyConstraints(x0, phi)
       )
     prob.solve()
-    if st := (prob.status != "optimal"): raise(f"Solution not found. status: {st}")
+    assert prob.status == "optimal", f"Solution not found. status: {prob.status}"
     # store results
     u0 = phi.value[Nx*(T+1):Nx*(T+1)+Nu, :Nx] @ x0 # (Nu, 1)
     return u0, prob.value
