@@ -109,3 +109,26 @@ class LowerTriangulatConstraint(LMPCConstraint):
         if i < T-2: # u has 1 less time step
           constraints += [phi_u[Nu*i:Nu*(i+1), Nx*(i+1):] == np.zeros((Nu, Nx*(T-i)))]
     return constraints
+
+class BoundConstraint(LMPCConstraint):
+  def __init__(self, xu: str, lu: str, b: np.ndarray) -> None:
+    assert xu in ["x", "u"], "'x' or 'u' bound not specified"
+    assert lu in ["lower", "upper"], "'lower' or 'upper' bound not specified"
+    self.b = b
+    self.xu = xu
+    self.lu = lu
+    
+  def compute(self, T: int, x0: np.ndarray, phi: cp.Variable):
+    # Different ranges if constraint on x or u
+    Nxu = self.b.shape[0]
+    Txu = T+1 if self.xu=="x" else T
+    offset = 0 if self.xu=="x" else phi.shape[0] - Nxu*T
+    # apply constraint
+    xu = phi @ x0
+    constraints = []
+    for t in range(Txu):
+      if self.lu == "upper":
+        constraints += [xu[offset+t*Nxu:offset+(t+1)*Nxu] <= self.b]
+      else:
+        constraints += [xu[offset+t*Nxu:offset+(t+1)*Nxu] >= self.b]
+    return constraints
