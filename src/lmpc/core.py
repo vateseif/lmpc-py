@@ -1,7 +1,9 @@
 import inspect
 import numpy as np
-from typing import Optional, List
 from abc import ABC, abstractmethod
+from typing import Optional, List, TypeVar
+
+Node = TypeVar("Node") # represents a subsystem 
 
 class ObjectiveFunc(ABC):
   
@@ -41,8 +43,8 @@ class LocalityModel(ObjBase):
   Abstract class that governs the information flow between subsystems
   '''
   def __init__(self) -> None:
-    self.out_x : List[List[int]]
-    self.out_u : List[List[int]]
+    self.out_x : List[List[Node]]
+    self.out_u : List[List[Node]]
     pass
 
   @abstractmethod

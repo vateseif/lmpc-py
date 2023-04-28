@@ -2,7 +2,7 @@ import numpy as np
 import cvxpy as cp
 from typing import List, Optional
 
-from src.lmpc.core import Constraint, LocalityModel
+from src.lmpc.core import Constraint, LocalityModel, Node
 
 class LMPCConstraint(Constraint):
 
@@ -33,8 +33,8 @@ class LocalityConstraint(LMPCConstraint):
               Nu: int,
               Ns: List[int],
               Na: List[int],
-              id_x: List[List[int]],
-              id_u: List[List[int]],
+              id_x: List[List[Node]],
+              id_u: List[List[Node]],
               locality: LocalityModel) -> None:
     # TODO: define a typevar Node instead of using int for states
     self.T = T
