@@ -102,15 +102,15 @@ class DistributedLTI(SystemModel):
     IZA = I - Z @ Aa                                          # (NX*(T+1), NX*(T+1))
     ZB = -Z @ Bb                                              # (NX*(T+1), NU*T)
     ZAB = np.concatenate((IZA, ZB), axis=1)                   # (NX*(T+1), NX*(T+1)+NU*T)
-    return SLSConstraint(ZAB, Nx)
+    return SLSConstraint(ZAB)
 
-  def getLocalityConstraint(self, T: int) -> LocalityConstraint:
+  def getLocalityConstraint(self) -> LocalityConstraint:
     ''' Construct LocalityConstraint '''
-    return LocalityConstraint(T, self.N, self.Nx, self.Nu, self.Ns, self.Na, self._idx, self._idu, self.locality_model)
+    return LocalityConstraint(self.locality_model)
 
-  def getLowerTriangularConstraint(self, T:int):
+  def getLowerTriangularConstraint(self):
     ''' Construct LowerTriangularConsstraints'''
-    return LowerTriangulatConstraint(self.Nx, self.Nu)
+    return LowerTriangulatConstraint()
 
   def sanityCheck(self):
     if len(self.Ns) != self.N: self.errorMessage("len(self.Ns) != self.N")

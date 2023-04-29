@@ -14,6 +14,7 @@ class LMPC(ControllerModel):
     super().__init__()
     self.T = T
     self.model: DistributedLTI = None
+    self.parentConstraint: LMPCConstraint = None
     self.constraints: List[Constraint] = [] 
     self.objectives: List[ObjectiveFunc] = [] 
 
@@ -22,9 +23,10 @@ class LMPC(ControllerModel):
     assert isinstance(model, DistributedLTI), f"{model} isnt of type DistributedLTI"
     assert model.locality_model != None, f"{model} doesnt have any locality_model"
     self.model = model
+    self.parentConstraint = LMPCConstraint(self.T, self.model)
     self.addConstraint(self.model.getSLSConstraint(self.T))
-    self.addConstraint(self.model.getLocalityConstraint(self.T))
-    self.addConstraint(self.model.getLowerTriangularConstraint(self.T))
+    self.addConstraint(self.model.getLocalityConstraint())
+    self.addConstraint(self.model.getLowerTriangularConstraint())
 
   def addObjectiveFun(self, obj_fun: LMPCObjectiveFun):
     assert isinstance(obj_fun, LMPCObjectiveFun), "objective function not of type LMPCObjectiveFun"
@@ -32,6 +34,7 @@ class LMPC(ControllerModel):
 
   def addConstraint(self, con: LMPCConstraint):
     assert isinstance(con, LMPCConstraint), "constraint not of type LMPCConstraint"
+    con._initFromParent(self.parentConstraint)
     self.constraints.append(con)
 
   def removeConstraintOfType(self, con_type: LMPCConstraint):
@@ -44,7 +47,7 @@ class LMPC(ControllerModel):
     # apply constraints stored in self.constraints
     constraints = []
     for con in self.constraints:
-      constraints += con.compute(self.T, x0, phi)
+      constraints += con.compute(x0, phi)
     return constraints
 
   def _applyObjective(self, x0: np.ndarray, phi: cp.Variable):
@@ -66,5 +69,5 @@ class LMPC(ControllerModel):
     prob.solve()
     assert prob.status == "optimal", f"Solution not found. status: {prob.status}"
     # store results
-    u0 = phi.value[Nx*(T+1):Nx*(T+1)+Nu, :Nx] @ x0 # (Nu, 1)
+    u0 = phi.value[Nx*(T+1):Nx*(T+1)+Nu, :Nx] @ x0[:Nx] # (Nu, 1)
     return u0, prob.value
