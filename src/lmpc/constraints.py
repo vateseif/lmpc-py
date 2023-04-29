@@ -2,21 +2,37 @@ import numpy as np
 import cvxpy as cp
 from typing import List, Optional
 
-from src.lmpc.core import Constraint, LocalityModel, Node
+from src.lmpc.core import Constraint, LocalityModel, SystemModel
 
 class LMPCConstraint(Constraint):
 
-  def compute(self, T:int, x0:np.ndarray, phi: cp.Variable):
+  def __init__(self, T:int, system) -> None:
+    self.T = T
+    self.N = system.N
+    self.Nx = system.Nx
+    self.Nu = system.Nu
+    self.Ns = system.Ns
+    self.Na = system.Na
+    # rows that correspond to each subsystem of Phi for states and actions 
+    self.rx = system._idx
+    self.ru = [[self.Nx*(T+1)+i for i in iu] for iu in system._idu]
+    # rows that correspond to each subsystem of Phi for states and actions along horizon
+    self.rxT = [ sum([[self.Nx*t + x for x in ix] for t in range(T+1)], []) for ix in system._idx ]
+    self.ruT = [ sum([[self.Nx*(T+1)+self.Nu*t + u for u in iu] for t in range(T)], []) for iu in system._idu ]
+    
+  def _initFromParent(self, parent):
+    vars(self).update(vars(parent))
+
+  def compute(self, x0:np.ndarray, phi: cp.Variable):
     pass
 
 
 class SLSConstraint(LMPCConstraint):
-  def __init__(self, ZAB: np.ndarray, Nx: int) -> None:
-    self.Nx = Nx
+  def __init__(self, ZAB: np.ndarray) -> None:
     self.ZAB = ZAB
 
-  def compute(self, T:int, x0:np.ndarray, phi: cp.Variable):
-    Nx = self.Nx
+  def compute(self, x0:np.ndarray, phi: cp.Variable):
+    T, Nx = self.T, self.Nx
     # check if w or only x0 was passed
     if x0.shape[0] == Nx*(T+1):
       rhs = np.eye(Nx*(T+1))
@@ -26,34 +42,11 @@ class SLSConstraint(LMPCConstraint):
 
 
 class LocalityConstraint(LMPCConstraint):
-  def __init__(self, 
-              T: int,
-              N: int,
-              Nx: int,
-              Nu: int,
-              Ns: List[int],
-              Na: List[int],
-              id_x: List[List[Node]],
-              id_u: List[List[Node]],
-              locality: LocalityModel) -> None:
-    # TODO: define a typevar Node instead of using int for states
-    self.T = T
-    self.N = N
-    self.Nx = Nx
-    self.Nu = Nu
-    self.Ns = Ns
-    self.Na = Na
-    self.locality_model = locality
-    # rows that correspond to each subsystem of Phi for states and actions 
-    self.rx = id_x
-    self.ru = [[Nx*(T+1)+i for i in iu] for iu in id_u]
-    # rows that correspond to each subsystem of Phi for states and actions along horizon
-    self.rxT = [ sum([[Nx*t + x for x in ix] for t in range(T+1)], []) for ix in id_x ]
-    self.ruT = [ sum([[Nx*(T+1)+Nu*t + u for u in iu] for t in range(T)], []) for iu in id_u ]
-    
-    pass
 
-  def compute(self, T:int, x0:np.ndarray, phi: cp.Variable):
+  def __init__(self, locality_model: LocalityModel):
+    self.locality_model = locality_model
+
+  def compute(self, x0:np.ndarray, phi: cp.Variable):
     # dimensions
     T, N, Nx, Ns, Na = self.T, self.N, self.Nx, self.Ns, self.Na
     # out-going sets
@@ -61,44 +54,38 @@ class LocalityConstraint(LMPCConstraint):
     out_x = self.locality_model.out_x
     out_u = self.locality_model.out_u
     # index of states per subsytem depending on x0 or w
-    if x0.shape[0] == Nx:
-      rx = self.rx
-      ru = self.ru
-      Tc = 1
-    else:
-      rx = self.rxT
-      ru = self.ruT
-      Tc = T+1
+    rx = self.rx if x0.shape[0] == Nx else self.rxT
+    ru = self.ru if x0.shape[0] == Nx else self.ruT
+    Tx = 1 if x0.shape[0] == Nx else T+1
+    Tu = 1 if x0.shape[0] == Nx else T
     # locality constraints
     constraints = []
     for i in range(N):
       for j in range(N):
         if i not in out_x[j]:
-          constraints += [phi[np.ix_(rx[i], rx[j])] == np.zeros((Ns[i]*Tc, Ns[j]*Tc))]
+          constraints += [phi[np.ix_(rx[i], rx[j])] == np.zeros((Ns[i]*Tx, Ns[j]*Tx))]
         if i not in out_u[j]:
-          constraints += [phi[np.ix_(ru[i], rx[j])] == np.zeros((Na[i]*Tc, Ns[j]*Tc))]
+          constraints += [phi[np.ix_(ru[i], rx[j])] == np.zeros((Na[i]*Tu, Ns[j]*Tx))]
     return constraints
 
 class TerminalConstraint(LMPCConstraint):
   def __init__(self, xT: Optional[np.ndarray] = None) -> None:
     self.xT = xT
 
-  def compute(self, T:int, x0:np.ndarray, phi: cp.Variable):
-    Nx = x0.shape[0]
+  def compute(self, x0:np.ndarray, phi: cp.Variable):
+    T, Nx = self.T, self.Nx
     if self.xT is None:
       self.xT = np.zeros((Nx, 1))
-    return [phi[Nx*T:Nx*(T+1)] @ x0 == self.xT]
+    return [phi[Nx*T:Nx*(T+1),:Nx] @ x0[:Nx] == self.xT]
 
 class LowerTriangulatConstraint(LMPCConstraint):
-  # TODO: passing Nx and Nu each time is not efficient
-  def __init__(self, Nx:int, Nu:int) -> None:
-    self.Nx = Nx
-    self.Nu = Nu
-    pass
 
-  def compute(self, T: int, x0: np.ndarray, phi: cp.Variable) -> List:
+  def __init__(self) -> None:
+    return
+
+  def compute(self, x0: np.ndarray, phi: cp.Variable) -> List:
     ''' Enforce phi_x, phi_u lower triangular if w is given and not only x0'''
-    Nx, Nu = self.Nx, self.Nu
+    T, Nx, Nu = self.T, self.Nx, self.Nu
     constraints = []
     # if x0 only given then skip
     if x0.shape[0] == Nx*(T+1):
@@ -111,24 +98,42 @@ class LowerTriangulatConstraint(LMPCConstraint):
     return constraints
 
 class BoundConstraint(LMPCConstraint):
-  def __init__(self, xu: str, lu: str, b: np.ndarray) -> None:
+  def __init__(self, xu: str, lu: str, b: np.ndarray,
+              sigma:Optional[float]=None, p:int = 2) -> None:
     assert xu in ["x", "u"], "'x' or 'u' bound not specified"
     assert lu in ["lower", "upper"], "'lower' or 'upper' bound not specified"
-    self.b = b
-    self.xu = xu
-    self.lu = lu
+    self.p = p    # disturbance norm
+    self.xu = xu  # 'x' or 'u'
+    self.lu = lu  # 'lower' or 'upper'
+    self.sigma = sigma  # disturbance bound (None if no disturbance)
+    self.b = b if lu == "upper" else -b    # bound value
+
+  def _initFromParent(self, parent):
+    super()._initFromParent(parent)
+    T, Nx, Nu = self.T, self.Nx, self.Nu
+    if self.xu == "x":
+      I = np.eye((T+1)*Nx)
+      if self.lu == "lower": I = -I
+      self.H = np.concatenate((I, np.zeros((Nx*(T+1), Nu*T))), axis=1)
+      self.b = np.concatenate([self.b]*(T+1), axis=0)
+    else:
+      I = np.eye(Nu*T)
+      if self.lu == "lower": I = -I
+      self.H = np.concatenate((np.zeros((Nu*T, Nx*(T+1))), I), axis=1)
+      self.b = np.concatenate([self.b]*T, axis=0)
+
+  def compute(self, x0: np.ndarray, phi: cp.Variable):
+    T, Nx = self.T, self.Nx
+    if self.sigma == None:
+      return [self.H @ phi[:, :Nx] @ x0[:Nx] <= self.b]
     
-  def compute(self, T: int, x0: np.ndarray, phi: cp.Variable):
-    # Different ranges if constraint on x or u
-    Nxu = self.b.shape[0]
-    Txu = T+1 if self.xu=="x" else T
-    offset = 0 if self.xu=="x" else phi.shape[0] - Nxu*T
-    # apply constraint
-    xu = phi @ x0
+    assert phi.shape[1]==Nx*(T+1), "Dimension of Phi not correct"
     constraints = []
-    for t in range(Txu):
-      if self.lu == "upper":
-        constraints += [xu[offset+t*Nxu:offset+(t+1)*Nxu] <= self.b]
-      else:
-        constraints += [xu[offset+t*Nxu:offset+(t+1)*Nxu] >= self.b]
+    x = self.H @ phi[:, :Nx] @ x0[:Nx]
+    for i in range(self.b.shape[0]):
+      ej = np.zeros((self.b.shape[0], 1))
+      ej[i][0] = 1
+      constraints += [x[i] + self.sigma*cp.atoms.norm(ej.T @ self.H @ phi[:,Nx:], 'nuc') <= self.b[i]]
+
     return constraints
+    
