@@ -28,15 +28,16 @@ class QuadForm(LMPCObjectiveFun):
               T: int,
               x0: np.ndarray, 
               phi: cp.Variable) -> cp.atom.Atom:
-    
+
     if self.xud is None:
       self.xud = np.zeros((phi.shape[0], 1))
 
     # compute system response
-    Nx = x0.shape[0]
+    Nx = self.Q.shape[0]
     Nu = self.R.shape[0]
     off = Nx*(T+1) # offset of states indices
-    xu = phi[:, :Nx] @ x0  # (Nx*(T+1)+Nu*T, 1)
+    xu = phi[:, :Nx] @ x0[:Nx]  # (Nx*(T+1)+Nu*T, 1)
+    
     # compute obj
     obj = 0
     for t in range(T):
