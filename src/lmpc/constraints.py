@@ -128,6 +128,7 @@ class BoundConstraint(LMPCConstraint):
       return [self.H @ phi[:, :Nx] @ x0[:Nx] <= self.b]
     
     assert phi.shape[1]==Nx*(T+1), "Dimension of Phi not correct"
+    assert self.b.shape[0]==self.H.shape[0], "Dimensions of b dont match"
     constraints = []
     x = self.H @ phi[:, :Nx] @ x0[:Nx]
     for i in range(self.b.shape[0]):

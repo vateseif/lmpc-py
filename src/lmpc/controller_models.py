@@ -70,4 +70,4 @@ class LMPC(ControllerModel):
     assert prob.status == "optimal", f"Solution not found. status: {prob.status}"
     # store results
     u0 = phi.value[Nx*(T+1):Nx*(T+1)+Nu, :Nx] @ x0[:Nx] # (Nu, 1)
-    return u0, prob.value
+    return u0, prob.value, phi.value
