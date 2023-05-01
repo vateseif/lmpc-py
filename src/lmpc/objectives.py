@@ -1,6 +1,7 @@
 import numpy as np
 import cvxpy as cp
 from typing import Optional
+from scipy.linalg import block_diag
 
 from src.lmpc.core import ObjectiveFunc
 
@@ -38,10 +39,8 @@ class QuadForm(LMPCObjectiveFun):
     off = Nx*(T+1) # offset of states indices
     xu = phi[:, :Nx] @ x0[:Nx]  # (Nx*(T+1)+Nu*T, 1)
     
-    # compute obj
-    obj = 0
-    for t in range(T):
-      obj += cp.quad_form(xu[t*Nx:(t+1)*Nx] - self.xud[t*Nx:(t+1)*Nx], self.Q)
-      obj += cp.quad_form(xu[off+t*Nu:off+(t+1)*Nu] - self.xud[off+t*Nu:off+(t+1)*Nu], self.R)
-
-    return obj
+    QT = np.kron(np.eye(T+1), self.Q)
+    RT = np.kron(np.eye(T), self.R)
+    QR = block_diag(QT, RT)
+    
+    return cp.quad_form(xu, QR)
