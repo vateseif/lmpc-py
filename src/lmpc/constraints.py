@@ -99,7 +99,7 @@ class LowerTriangulatConstraint(LMPCConstraint):
 
 class BoundConstraint(LMPCConstraint):
   def __init__(self, xu: str, lu: str, b: np.ndarray,
-              sigma:Optional[float]=None, p:int = 2) -> None:
+              sigma:float=0, p:int = 2) -> None:
     assert xu in ["x", "u"], "'x' or 'u' bound not specified"
     assert lu in ["lower", "upper"], "'lower' or 'upper' bound not specified"
     self.p = p    # disturbance norm
@@ -124,7 +124,7 @@ class BoundConstraint(LMPCConstraint):
 
   def compute(self, x0: np.ndarray, phi: cp.Variable):
     T, Nx = self.T, self.Nx
-    if self.sigma == None:
+    if self.sigma == 0:
       return [self.H @ phi[:, :Nx] @ x0[:Nx] <= self.b]
     
     assert phi.shape[1]==Nx*(T+1), "Dimension of Phi not correct"
