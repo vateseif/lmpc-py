@@ -1,6 +1,6 @@
 import numpy as np
 import cvxpy as cp
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from src.lmpc.constraints import LMPCConstraint
 from src.lmpc.objectives import LMPCObjectiveFun
@@ -17,6 +17,7 @@ class LMPC(ControllerModel):
     self.parentConstraint: LMPCConstraint = None
     self.constraints: List[Constraint] = [] 
     self.objectives: List[ObjectiveFunc] = [] 
+    self.prob : Optional[cp.Problem] = None
 
   def __lshift__(self, model: DistributedLTI):
     ''' Overload lshift to augment the ControllerModel with the DistributedLTI'''
@@ -55,19 +56,30 @@ class LMPC(ControllerModel):
     objective = sum([obj.compute(self.T, x0, phi) for obj in self.objectives])
     return cp.Minimize(objective)
 
-  def solve(self, x0: np.ndarray) -> Tuple[np.ndarray, float]:
-    ''' Solve the MPC problem and return u0 if solution is optimal else raise'''
+  def _setupSolver(self, x0: np.ndarray):
     Nx, Nu, T = self.model.Nx, self.model.Nu, self.T
     assert x0.shape[0]==Nx or x0.shape[0]==Nx*(T+1), "x0 dim neither Nx not Nx*(T+1)"
     # define optim variables
-    phi = cp.Variable((Nx*(T+1)+Nu*T, x0.shape[0]))
+    self.phi = cp.Variable((Nx*(T+1)+Nu*T, x0.shape[0]))
+    # define param
+    self.x0 = cp.Parameter(x0.shape)
     # solve
-    prob = cp.Problem(
-      self._applyObjective(x0, phi),
-      self._applyConstraints(x0, phi)
-      )
-    prob.solve()
-    assert prob.status == "optimal", f"Solution not found. status: {prob.status}"
+    self.prob = cp.Problem(
+      self._applyObjective(self.x0, self.phi),
+      self._applyConstraints(self.x0, self.phi)
+    )
+    return
+
+  def solve(self, x0: np.ndarray) -> Tuple[np.ndarray, float]:
+    ''' Solve the MPC problem and return u0 if solution is optimal else raise'''
+    Nx, Nu, T = self.model.Nx, self.model.Nu, self.T
+    # init cvxpy solver if first call
+    if self.prob == None:
+      self._setupSolver(x0)
+    # update cvxpy parameter
+    self.x0.value = x0
+    self.prob.solve("SCS",verbose=False, warm_start=False)
+    assert self.prob.status == "optimal", f"Solution not found. status: {self.prob.status}"
     # store results
-    u0 = phi.value[Nx*(T+1):Nx*(T+1)+Nu, :Nx] @ x0[:Nx] # (Nu, 1)
-    return u0, prob.value, phi.value
+    u0 = self.phi.value[Nx*(T+1):Nx*(T+1)+Nu, :Nx] @ x0[:Nx] # (Nu, 1)
+    return u0, self.prob.value, self.phi.value
