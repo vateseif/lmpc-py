@@ -2,7 +2,7 @@ import numpy as np
 import cvxpy as cp
 from typing import List, Optional, Tuple
 
-from src.lmpc.constraints import LMPCConstraint
+from src.lmpc.constraints import BoundConstraint, LMPCConstraint
 from src.lmpc.objectives import LMPCObjectiveFun
 from src.lmpc.system_models import DistributedLTI
 from src.lmpc.core import ControllerModel, ObjectiveFunc, Constraint
@@ -56,6 +56,17 @@ class LMPC(ControllerModel):
     objective = sum([obj.compute(self.T, x0, phi) for obj in self.objectives])
     return cp.Minimize(objective)
 
+  def _checkInitialCondition(self, x0: np.ndarray):
+    """ Check if x0 or w is passed and if LMPC is robust then concatenates x0 and 0 """
+    Nx, T = self.model.Nx, self.T
+    if x0.shape[0] == Nx:
+      for c in self.constraints:
+        if isinstance(c, BoundConstraint):
+          if c.sigma != 0:
+            x0 = np.concatenate((x0, np.zeros((Nx*T,1))),axis=0)
+            break
+    return x0
+
   def _setupSolver(self, x0: np.ndarray):
     Nx, Nu, T = self.model.Nx, self.model.Nu, self.T
     assert x0.shape[0]==Nx or x0.shape[0]==Nx*(T+1), "x0 dim neither Nx not Nx*(T+1)"
@@ -73,12 +84,14 @@ class LMPC(ControllerModel):
   def solve(self, x0: np.ndarray) -> Tuple[np.ndarray, float]:
     ''' Solve the MPC problem and return u0 if solution is optimal else raise'''
     Nx, Nu, T = self.model.Nx, self.model.Nu, self.T
+    # Concatenate x0 with 0 if LMPC is to be robust
+    x0 = self._checkInitialCondition(x0)
     # init cvxpy solver if first call
     if self.prob == None:
       self._setupSolver(x0)
     # update cvxpy parameter
     self.x0.value = x0
-    self.prob.solve("SCS",verbose=False, warm_start=False)
+    self.prob.solve("SCS",verbose=False, warm_start=True)
     assert self.prob.status == "optimal", f"Solution not found. status: {self.prob.status}"
     # store results
     u0 = self.phi.value[Nx*(T+1):Nx*(T+1)+Nu, :Nx] @ x0[:Nx] # (Nu, 1)
