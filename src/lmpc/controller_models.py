@@ -18,6 +18,8 @@ class LMPC(ControllerModel):
     self.constraints: List[Constraint] = [] 
     self.objectives: List[ObjectiveFunc] = [] 
     self.prob : Optional[cp.Problem] = None
+    self.useCodeGenSolver = False
+    self.solverPath = None
 
   def __lshift__(self, model: DistributedLTI):
     ''' Overload lshift to augment the ControllerModel with the DistributedLTI'''
@@ -73,7 +75,7 @@ class LMPC(ControllerModel):
     # define optim variables
     self.phi = cp.Variable((Nx*(T+1)+Nu*T, x0.shape[0]))
     # define param
-    self.x0 = cp.Parameter(x0.shape)
+    self.x0 = cp.Parameter(x0.shape, name="x0")
     # solve
     self.prob = cp.Problem(
       self._applyObjective(self.x0, self.phi),
@@ -81,7 +83,7 @@ class LMPC(ControllerModel):
     )
     return
 
-  def solve(self, x0: np.ndarray) -> Tuple[np.ndarray, float]:
+  def solve(self, x0: np.ndarray, solver="MOSEK") -> Tuple[np.ndarray, float]:
     ''' Solve the MPC problem and return u0 if solution is optimal else raise'''
     Nx, Nu, T = self.model.Nx, self.model.Nu, self.T
     # Concatenate x0 with 0 if LMPC is to be robust
@@ -91,8 +93,21 @@ class LMPC(ControllerModel):
       self._setupSolver(x0)
     # update cvxpy parameter
     self.x0.value = x0
-    self.prob.solve("SCS",verbose=False, warm_start=True)
+    # TODO define solver as property of class
+    self.prob.solve(solver, verbose=False, warm_start=True)
     assert self.prob.status == "optimal", f"Solution not found. status: {self.prob.status}"
     # store results
     u0 = self.phi.value[Nx*(T+1):Nx*(T+1)+Nu, :Nx] @ x0[:Nx] # (Nu, 1)
     return u0, self.prob.value, self.phi.value
+
+  def codeGen(self, x0: Optional[np.ndarray] = None, solverPath="solvers"):
+    # TODO: finish setting up codegen (it seems that using Mosek is faster than codegen...)
+    if self.prob == None:
+      assert x0 is not None, "self.prob and x0 not defined, define one of them"
+      self._setupSolver(x0)
+    
+    from cvxpygen import cpg
+    cpg.generate_code(self.prob, code_dir=solverPath)
+    self.useCodeGenSolver = True
+    self.solverPath = solverPath
+    return
