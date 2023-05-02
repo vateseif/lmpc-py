@@ -1,6 +1,6 @@
 # lmpc-py
 
-## Python environment
+## Setup
 ### Create env
 Download anaconda and create the new enviroment
 ~~~
@@ -12,3 +12,5 @@ You need to activate the environment and install all requierements
 conda activate lmpc
 pip install -r requirements.txt
 ~~~
+### Install Mosek
+Follow [this](https://docs.mosek.com/latest/install/installation.html) tutorial for the installation of Mosek.
