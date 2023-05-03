@@ -69,14 +69,24 @@ class LocalityConstraint(LMPCConstraint):
     return constraints
 
 class TerminalConstraint(LMPCConstraint):
-  def __init__(self, xT: Optional[np.ndarray] = None) -> None:
-    self.xT = xT
+  def __init__(self, xTd: Optional[np.ndarray] = None, G: Optional[np.ndarray] = None) -> None:
+    """ G @ xT = xTd"""
+    self.G = G
+    self.xTd = xTd
+    
 
   def compute(self, x0:np.ndarray, phi: cp.Variable):
     T, Nx = self.T, self.Nx
-    if self.xT is None:
-      self.xT = np.zeros((Nx, 1))
-    return [phi[Nx*T:Nx*(T+1),:Nx] @ x0[:Nx] == self.xT]
+    if self.xTd is None:
+      self.G = np.eye(Nx)
+      self.xTd = cp.Parameter((Nx, 1), value=np.zeros((Nx,1)))
+    else:
+      self.xTd = cp.Parameter(self.xTd.shape, value=self.xTd)
+
+    assert self.G.shape[0] == self.xTd.shape[0], "dim 0 of G doesnt match xTd"
+    assert self.G.shape[1] == Nx, "dim 1 of G is not Nx"
+
+    return [self.G @ phi[Nx*T:Nx*(T+1),:Nx] @ x0[:Nx] == self.xTd]
 
 class LowerTriangulatConstraint(LMPCConstraint):
 
@@ -113,12 +123,16 @@ class BoundConstraint(LMPCConstraint):
     T, Nx, Nu = self.T, self.Nx, self.Nu
     if self.xu == "x":
       I = np.eye((T+1)*Nx)
-      if self.lu == "lower": I = -I
+      if self.lu == "lower": 
+        I = -I
+        #self.b = -self.b
       self.H = np.concatenate((I, np.zeros((Nx*(T+1), Nu*T))), axis=1)
       self.b = np.concatenate([self.b]*(T+1), axis=0)
     else:
       I = np.eye(Nu*T)
-      if self.lu == "lower": I = -I
+      if self.lu == "lower": 
+        I = -I
+        #self.b = -self.b
       self.H = np.concatenate((np.zeros((Nu*T, Nx*(T+1))), I), axis=1)
       self.b = np.concatenate([self.b]*T, axis=0)
 
