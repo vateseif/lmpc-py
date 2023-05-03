@@ -1,9 +1,7 @@
-import os
-import sys
-sys.path.append(os.path.abspath(''))
-
 import lmpc
 import numpy as np
+
+# TODO lmpc is being imported twice. Fix all imports 
 
 def getAgent():
   N = 1

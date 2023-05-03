@@ -1,7 +1,4 @@
-import os
-import sys
 import numpy as np
-sys.path.append(os.path.abspath(''))
 
 from agent import getAgent
 from pettingzoo.mpe import simple_v2
