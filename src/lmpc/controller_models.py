@@ -24,15 +24,15 @@ class LMPC(ControllerModel):
   def __lshift__(self, model: DistributedLTI):
     ''' Overload lshift to augment the ControllerModel with the DistributedLTI'''
     assert isinstance(model, DistributedLTI), f"{model} isnt of type DistributedLTI"
-    assert model.locality_model != None, f"{model} doesnt have any locality_model"
+    #assert model.locality_model != None, f"{model} doesnt have any locality_model"
     self.model = model
     self.parentConstraint = LMPCConstraint(self.T, self.model)
     self.addConstraint(self.model.getSLSConstraint(self.T))
-    self.addConstraint(self.model.getLocalityConstraint())
     self.addConstraint(self.model.getLowerTriangularConstraint())
+    if model.locality_model!=None: self.addConstraint(self.model.getLocalityConstraint())
 
   def addObjectiveFun(self, obj_fun: LMPCObjectiveFun):
-    assert isinstance(obj_fun, LMPCObjectiveFun), "objective function not of type LMPCObjectiveFun"
+    #assert isinstance(obj_fun, LMPCObjectiveFun), "objective function not of type LMPCObjectiveFun"
     self.objectives.append(obj_fun)
 
   def addConstraint(self, con: LMPCConstraint):
