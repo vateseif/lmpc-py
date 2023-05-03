@@ -23,9 +23,10 @@ class DistributedLTI(SystemModel):
     # System dimensions
     self.N = N                # number of subsystems
     self.Ns = Ns              # states of each subsystem
-    self.Na = Na              # actuators of each subsystem
+    self.Na = Na              # actuators o each subsystem
     self.Nx = sum(self.Ns)    # total states
     self.Nu = sum(self.Na)    # total actuators
+    self.locality_model = None
 
     # Compute indices of states that belong to each subsystem
     Ns_cum = np.cumsum(Ns).tolist()

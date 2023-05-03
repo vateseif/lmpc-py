@@ -22,6 +22,7 @@ class QuadForm(LMPCObjectiveFun):
     
     self.Q = Q
     self.R = R
+    #if xud
     self.xud = xud  # reference states and inputs
 
 
@@ -35,12 +36,10 @@ class QuadForm(LMPCObjectiveFun):
 
     # compute system response
     Nx = self.Q.shape[0]
-    Nu = self.R.shape[0]
-    off = Nx*(T+1) # offset of states indices
     xu = phi[:, :Nx] @ x0[:Nx]  # (Nx*(T+1)+Nu*T, 1)
     
     QT = np.kron(np.eye(T+1), self.Q)
     RT = np.kron(np.eye(T), self.R)
     QR = block_diag(QT, RT)
     
-    return cp.quad_form(xu, QR)
+    return cp.quad_form(xu-self.xud, QR)
