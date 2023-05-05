@@ -28,7 +28,7 @@ for i, ag in enumerate(env.agent_iter()):
         break
     else:
         #action = env.action_space(ag).sample()
-        u, _, Phi = agent.solve(agent.model._x, solver="MOSEK")
+        u, _, Phi = agent.solve(agent.model._x, solver="SCS")
         agent.model.updateState(agent.model.step(u))
         action = np.concatenate(([0], u.squeeze()), dtype=np.float32)
     
