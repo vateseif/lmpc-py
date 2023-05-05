@@ -33,6 +33,7 @@ class LMPC(ControllerModel):
 
   def addObjectiveFun(self, obj_fun: LMPCObjectiveFun):
     #assert isinstance(obj_fun, LMPCObjectiveFun), "objective function not of type LMPCObjectiveFun"
+    obj_fun._initFromParent(self.parentConstraint)
     self.objectives.append(obj_fun)
 
   def addConstraint(self, con: LMPCConstraint):
