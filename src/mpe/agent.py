@@ -97,11 +97,10 @@ class Agent:
       p = np.array([[obs[2]], [obs[3]]])
       dp = np.array([[obs[0]], [obs[1]]])
       x = np.concatenate((p, dp))
-      xTd = np.array([[obs[4]], [obs[5]]])
+      xTd = p + np.array([[obs[4]], [obs[5]]])
       self.controller.objectives[0].xTd.value = xTd
       u, _, _ = self.controller.solve(x, "SCS")
       action = np.concatenate(([0], u.squeeze()), dtype=np.float32)
-    
     return action
 
 
