@@ -3,24 +3,13 @@ from agent import Agent
 from pettingzoo.mpe import simple_tag_v2
 
 
-env = simple_tag_v2.env(num_adversaries=1, num_obstacles=0, max_cycles=100, continuous_actions=True, render_mode='human')
-env.reset()
+env = simple_tag_v2.parallel_env(num_adversaries=3, num_obstacles=3, max_cycles=200, continuous_actions=True, render_mode='human')
+obs = env.reset()
 
 agent = Agent(1, "tag")
-print(agent.T)
 
-for i, agent_name in enumerate(env.agent_iter()):
-    observation, reward, termination, truncation, info = env.last()
-
-    if termination or truncation:
-        break
-    else:
-      if agent_name == "agent_0":
-        action = env.action_space(agent_name).sample()
-        action = np.ones((5,), dtype=np.float32) * 1e-5
-      else:
-        action = agent.act(observation)
-    
-    env.step(action)
+while env.agents:
+  actions = {agent_name: agent.act(obs[agent_name]) if agent_name!="agent_0" else env.action_space(agent_name).sample()  for agent_name in env.agents }  # this is where you would insert your policy
+  obs, rewards, terminations, truncations, infos = env.step(actions)
 
 env.close()
