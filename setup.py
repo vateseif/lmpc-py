@@ -7,7 +7,7 @@ setup(
     name="lmpc",
     version="0.0.1",
     description="Multi agent control with communication",
-    packages=["lmpc", "mpe"],
+    packages=["lmpc"],
     package_dir={'':'src'},
     install_requires=requirements
 )
