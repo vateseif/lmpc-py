@@ -2,7 +2,7 @@ import numpy as np
 import cvxpy as cp
 from typing import List, Optional
 
-from src.lmpc.core import Constraint, LocalityModel, SystemModel
+from lmpc.core import Constraint, LocalityModel, SystemModel
 
 class LMPCConstraint(Constraint):
 

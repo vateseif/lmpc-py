@@ -2,10 +2,10 @@ import numpy as np
 import cvxpy as cp
 from typing import List, Optional, Tuple
 
-from src.lmpc.constraints import BoundConstraint, LMPCConstraint
-from src.lmpc.objectives import LMPCObjectiveFun
-from src.lmpc.system_models import DistributedLTI
-from src.lmpc.core import ControllerModel, ObjectiveFunc, Constraint
+from lmpc.constraints import BoundConstraint, LMPCConstraint
+from lmpc.objectives import LMPCObjectiveFun
+from lmpc.system_models import DistributedLTI
+from lmpc.core import ControllerModel, ObjectiveFunc, Constraint
 
 
 class LMPC(ControllerModel):

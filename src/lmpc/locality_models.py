@@ -2,7 +2,7 @@ import networkx as nx
 from itertools import product
 from typing import Optional, List, Tuple
 
-from src.lmpc.core import LocalityModel
+from lmpc.core import LocalityModel
 
 class dLocality(LocalityModel):
   def __init__(self, d:Optional[int] = None) -> None:

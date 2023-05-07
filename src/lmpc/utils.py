@@ -3,9 +3,9 @@ import networkx as nx
 from typing import Tuple
 import matplotlib.pyplot as plt
 
-from src.lmpc.core import SystemModel
-from src.lmpc.system_models import DistributedLTI
-from src.lmpc.locality_models import dLocality
+from lmpc.core import SystemModel
+from lmpc.system_models import DistributedLTI
+from lmpc.locality_models import dLocality
 
 
 def generateRandomSquareMeshLTI(n: int, p: float=0.4, seed:int=None) -> Tuple[np.ndarray]:

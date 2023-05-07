@@ -3,7 +3,7 @@ import cvxpy as cp
 from typing import Optional
 from scipy.linalg import block_diag
 
-from src.lmpc.core import ObjectiveFunc
+from lmpc.core import ObjectiveFunc
 
 class LMPCObjectiveFun(ObjectiveFunc):
 
@@ -69,3 +69,29 @@ class TerminalQuadForm(LMPCObjectiveFun):
     xT = phi[Nx*T:Nx*(T+1), :Nx] @ x0[:Nx]
 
     return cp.QuadForm(self.G @ xT - self.xTd, self.Q)
+
+
+class XQuadForm(LMPCObjectiveFun):
+  def __init__(self, Q:np.ndarray, xd: np.ndarray, G:Optional[np.ndarray]=None) -> None:
+    self.Q = Q
+    self.G = G      # basically the selction matrix
+    self.xd = xd
+
+
+  def compute(self, T: int, x0: np.ndarray, phi: cp.Variable):
+    Nx = self.Nx
+    if self.G is None:
+      self.G = np.eye(Nx)
+
+    #assert self.G.shape[0] == self.xTd.shape[0], "dim 0 of G doesnt match xTd"
+    #assert self.G.shape[1] == Nx
+    #assert self.G.shape[1] == Nx, "dim 1 of G is not Nx"
+    #assert self.Q.shape[0] == self.G.shape[0]
+
+    self.Q = np.kron(np.eye(T+1), self.G @ self.Q @ self.G.T)
+    self.G = np.kron(np.eye(T+1), self.G)
+    self.xd = cp.Parameter(self.xd.shape, value=self.xd)
+    x = phi[:Nx*(T+1), :Nx] @ x0[:Nx]
+
+    return cp.QuadForm(self.G @ x - self.xd, self.Q)
+    
