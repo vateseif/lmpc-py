@@ -15,6 +15,8 @@ n_frames_per_episode = 100
 n_eval_episodes = 5
 num_adversaries = 1
 num_obstacles = 2
+input_size = 4+2*num_obstacles+2*num_adversaries
+output_size = 4
 
 # tensorboard
 writer = SummaryWriter(f"board/tag/{datetime.now()}")
@@ -26,7 +28,7 @@ env = simple_tag_v2.parallel_env(num_adversaries=num_adversaries, num_obstacles=
 env.reset()
 
 # init LMPC agents (adversaries) and learning-based agent
-nn_agent = NNAgent(input_size=4+2*num_obstacles+2*num_adversaries, output_size=4)
+nn_agent = NNAgent(input_size=input_size, output_size=output_size)
 adversary_agents = LMPCAgent(env.agents[:-1], "tag")
 
 
