@@ -139,13 +139,16 @@ class GaussianPolicy(nn.Module):
 
 
 class NNAgent(nn.Module):
-  def __init__(self, input_size: int, output_size: int, gamma=0.99, lr_pi=3e-4) -> None:
+  def __init__(self, input_size: int, output_size: int, gamma=0.99, lr_pi=3e-4, checkpoint:Optional[str]=None) -> None:
     super().__init__()
 
     self.gamma = gamma
     self.device = "cuda" if torch.cuda.is_available() else "cpu"
     self.policy = GaussianPolicy(input_size, 1024, output_size).to(self.device)
     self.optimizer = torch.optim.Adam(self.policy.parameters(), lr = lr_pi)
+
+    if checkpoint is not None:
+      self.policy.load_state_dict(torch.load(checkpoint)["model_state_dict"])
 
     
     
