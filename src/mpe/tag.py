@@ -1,10 +1,13 @@
+import torch
 import numpy as np
 from tqdm import tqdm
 from datetime import datetime
-from utils import evaluate_policy
 from agent import LMPCAgent, NNAgent
 from pettingzoo.mpe import simple_tag_v2
+from utils import evaluate_policy, SaveBestModel
 from torch.utils.tensorboard import SummaryWriter
+
+torch.manual_seed(2023)
 
 # params
 n_episodes = 20000
@@ -15,6 +18,8 @@ num_obstacles = 2
 
 # tensorboard
 writer = SummaryWriter(f"board/tag/{datetime.now()}")
+
+save_best_model = SaveBestModel()
 
 # init env
 env = simple_tag_v2.parallel_env(num_adversaries=num_adversaries, num_obstacles=num_obstacles, max_cycles=n_frames_per_episode, continuous_actions=True, render_mode='rgb')
@@ -47,6 +52,7 @@ for episode in tqdm(range(n_episodes)):
   # evaluate average reward
   if episode%20==0:
     avg_reward = evaluate_policy(nn_agent, adversary_agents, env, n_eval_episodes)
+    save_best_model(avg_reward, episode, nn_agent.policy, nn_agent.optimizer)
 
   # write to tensorboard
   writer.add_scalar("policy_loss", policy_loss, episode)
