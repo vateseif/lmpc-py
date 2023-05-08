@@ -109,7 +109,7 @@ class LMPCAgent:
         xTd = np.concatenate((xTd, p + np.array([[obs[agent_name][-4]], [obs[agent_name][-3]]])))
       
       self.controller.objectives[0].xTd.value = xTd
-      u, _, _ = self.controller.solve(x, "MOSEK")
+      u, _, _ = self.controller.solve(x, "SCS")
       action = {name: np.concatenate(([0], u.squeeze()[i*self.Na:(i+1)*self.Na]), dtype=np.float32) for i, name in enumerate(self.names)}
       
     return action
@@ -118,17 +118,22 @@ class GaussianPolicy(nn.Module):
 
   def __init__(self, in_size: int, hidden_size:int, out_size: int) -> None:
     super().__init__()
-    self.linear = nn.Linear(in_size, hidden_size)
+    self.linear = nn.Sequential(*[
+      nn.Linear(in_size, 256),
+      nn.ReLU(),
+      nn.Linear(256, hidden_size),
+      nn.ReLU(),
+    ])
     self.mean = nn.Linear(hidden_size, out_size)
     self.log_std = nn.Linear(hidden_size, out_size)
 
   def forward(self, inputs):
     # forward pass of NN
     x = inputs
-    x = F.relu(self.linear(x))
+    x = self.linear(x)
     mean = self.mean(x)
     log_std = self.log_std(x) # if more than one action this will give you the diagonal elements of a diagonal covariance matrix
-    log_std = torch.clamp(log_std, min=-0.2, max=0.2) # We limit the variance by forcing within a range of -0.2,0.2
+    log_std = torch.clamp(log_std, min=-2, max=20) # We limit the variance by forcing within a range of -0.2,0.2
     std = log_std.exp()
     return mean, std
 
@@ -139,7 +144,7 @@ class NNAgent(nn.Module):
 
     self.gamma = gamma
     self.device = "cuda" if torch.cuda.is_available() else "cpu"
-    self.policy = GaussianPolicy(input_size, 128, output_size).to(self.device)
+    self.policy = GaussianPolicy(input_size, 1024, output_size).to(self.device)
     self.optimizer = torch.optim.Adam(self.policy.parameters(), lr = lr_pi)
 
     
@@ -154,7 +159,7 @@ class NNAgent(nn.Module):
     log_prob = normal.log_prob(sample).sum()
     action = torch.sigmoid(sample) # bound actions from 0 to 1
 
-    return action.numpy(), log_prob.sum()
+    return action.cpu().numpy(), log_prob.sum()
 
 
   def train(self, trajectory: List[Dict[str,np.ndarray]]):
