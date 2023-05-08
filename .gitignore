@@ -131,3 +131,6 @@ dmypy.json
 
 # my files
 zzdlmpc.ipynb
+
+# trained model weights
+models/
