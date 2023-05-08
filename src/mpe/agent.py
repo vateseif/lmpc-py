@@ -1,15 +1,21 @@
 import lmpc
-import numpy as np
+import torch
 
-from typing import Optional
+import numpy as np
+import torch.nn as nn
+import torch.nn.functional as F
+
+from torch.distributions import Normal
+from typing import Optional, List, Dict
 
 envs = ["simple", "tag"]
 
-class Agent:
+class LMPCAgent:
 
-  def __init__(self, N: int, env: str, locality: Optional[str]=None) -> None:
+  def __init__(self, names: List[str], env: str, locality: Optional[str]=None) -> None:
     assert env in envs, f"env {env} not in {envs}"
-    self.N = N
+    self.N = len(names)
+    self.names = names
     self.env = env
     self.locality = locality
     
@@ -43,7 +49,7 @@ class Agent:
     A = np.kron(np.eye(self.N), A1)
     B = np.kron(np.eye(self.N), B1)
     # discrete dynamics
-    Ad = np.eye(self.Ns) + A*self.dt
+    Ad = np.eye(A.shape[0]) + A*self.dt
     Bd = B*self.dt*self.sensitivity
     
     # init sys
@@ -94,13 +100,86 @@ class Agent:
       # TODO
       pass
     else:
-      p = np.array([[obs[2]], [obs[3]]])
-      dp = np.array([[obs[0]], [obs[1]]])
-      x = np.concatenate((p, dp))
-      xTd = p + np.array([[obs[-4]], [obs[-3]]])
+      x = np.zeros((0,1))
+      xTd = np.zeros((0,1))
+      for agent_name in self.names:
+        p = np.array([[obs[agent_name][2]], [obs[agent_name][3]]])
+        dp = np.array([[obs[agent_name][0]], [obs[agent_name][1]]])
+        x = np.concatenate((x, p, dp))
+        xTd = np.concatenate((xTd, p + np.array([[obs[agent_name][-4]], [obs[agent_name][-3]]])))
+      
       self.controller.objectives[0].xTd.value = xTd
-      u, _, _ = self.controller.solve(x, "SCS")
-      action = np.concatenate(([0], u.squeeze()), dtype=np.float32)
+      u, _, _ = self.controller.solve(x, "MOSEK")
+      action = {name: np.concatenate(([0], u.squeeze()[i*self.Na:(i+1)*self.Na]), dtype=np.float32) for i, name in enumerate(self.names)}
+      
     return action
 
+class GaussianPolicy(nn.Module):
 
+  def __init__(self, in_size: int, hidden_size:int, out_size: int) -> None:
+    super().__init__()
+    self.linear = nn.Linear(in_size, hidden_size)
+    self.mean = nn.Linear(hidden_size, out_size)
+    self.log_std = nn.Linear(hidden_size, out_size)
+
+  def forward(self, inputs):
+    # forward pass of NN
+    x = inputs
+    x = F.relu(self.linear(x))
+    mean = self.mean(x)
+    log_std = self.log_std(x) # if more than one action this will give you the diagonal elements of a diagonal covariance matrix
+    log_std = torch.clamp(log_std, min=-0.2, max=0.2) # We limit the variance by forcing within a range of -0.2,0.2
+    std = log_std.exp()
+    return mean, std
+
+
+class NNAgent(nn.Module):
+  def __init__(self, input_size: int, output_size: int, gamma=0.99, lr_pi=3e-4) -> None:
+    super().__init__()
+
+    self.gamma = gamma
+    self.device = "cuda" if torch.cuda.is_available() else "cpu"
+    self.policy = GaussianPolicy(input_size, 128, output_size).to(self.device)
+    self.optimizer = torch.optim.Adam(self.policy.parameters(), lr = lr_pi)
+
+    
+    
+  def forward(self, obs: np.ndarray):
+    obs = torch.from_numpy(obs).float().to(self.device)
+    mu, std = self.policy(obs) 
+    # init normal distribution
+    normal = Normal(mu, std)
+    # sample action and compute log probability
+    sample = normal.sample()
+    log_prob = normal.log_prob(sample).sum()
+    action = torch.sigmoid(sample) # bound actions from 0 to 1
+
+    return action.numpy(), log_prob.sum()
+
+
+  def train(self, trajectory: List[Dict[str,np.ndarray]]):
+
+    states = [i["state"] for i in trajectory]
+    actions = [i["action"] for i in trajectory]
+    rewards = [i["reward"] for i in trajectory]
+    log_probs = [i["log_prob"] for i in trajectory]
+    
+    #calculate rewards to go
+    R = 0
+    returns = []
+    for r in rewards[::-1]:
+        R = r + self.gamma * R
+        returns.insert(0, R)
+    returns = torch.tensor(returns).to(self.device)
+
+    policy_loss = []
+    for log_prob, R in zip(log_probs, returns):
+      policy_loss.append( - log_prob * R)
+
+    policy_loss = torch.stack( policy_loss ).sum().to(self.device)
+    # update policy weights
+    self.optimizer.zero_grad()
+    policy_loss.backward()
+    self.optimizer.step()
+    
+    return policy_loss
