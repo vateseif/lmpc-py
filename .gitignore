@@ -134,3 +134,6 @@ zzdlmpc.ipynb
 
 # trained model weights
 models/
+
+# tensorboard
+board/
