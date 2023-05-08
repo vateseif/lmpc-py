@@ -13,6 +13,7 @@ num_adversaries = 1
 num_obstacles = 2
 input_size = 4+2*num_obstacles+2*num_adversaries
 output_size = 4
+checkpoint = "models/tag/best_2023-05-08 23:49:37.237054.pth"
 
 
 # init env
@@ -20,7 +21,7 @@ env = simple_tag_v2.parallel_env(num_adversaries=num_adversaries, num_obstacles=
 env.reset()
 
 # init LMPC agents (adversaries) and learning-based agent
-nn_agent = NNAgent(input_size, output_size, checkpoint="models/tag/best_model.pth")
+nn_agent = NNAgent(input_size, output_size, checkpoint=checkpoint)
 adversary_agents = LMPCAgent(env.agents[:-1], "tag")
 
 
