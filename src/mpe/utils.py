@@ -18,5 +18,5 @@ def evaluate_policy(agent, adversary, env, eval_episodes = 10):
   
   agent.policy.train()
   avg_reward /= eval_episodes
-  print(f"the average reward is: {avg_reward}")
+  return avg_reward
   
