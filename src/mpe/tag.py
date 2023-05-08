@@ -1,15 +1,36 @@
 import numpy as np
-from agent import Agent
+from utils import evaluate_policy
+from agent import LMPCAgent, NNAgent
 from pettingzoo.mpe import simple_tag_v2
 
+n_episodes = 200
+n_frames_per_episode = 100
+n_eval_episodes = 5
 
-env = simple_tag_v2.parallel_env(num_adversaries=3, num_obstacles=3, max_cycles=200, continuous_actions=True, render_mode='human')
-obs = env.reset()
+# init env
+env = simple_tag_v2.parallel_env(num_adversaries=3, num_obstacles=2, max_cycles=n_frames_per_episode, continuous_actions=True, render_mode='rgb')
+env.reset()
 
-agent = Agent(1, "tag")
+# init LMPC agents (adversaries) and learning-based agent
+nn_agent = NNAgent(input_size=14, output_size=4)
+adversary_agents = LMPCAgent(env.agents[:-1], "tag")
 
-while env.agents:
-  actions = {agent_name: agent.act(obs[agent_name]) if agent_name!="agent_0" else env.action_space(agent_name).sample()  for agent_name in env.agents }  # this is where you would insert your policy
-  obs, rewards, terminations, truncations, infos = env.step(actions)
+
+for i in range(n_episodes):
+  obs = env.reset()
+  trajectory = []
+  while env.agents:
+    actions = adversary_agents.act(obs)
+    action, log_prob = nn_agent(obs["agent_0"])
+    actions["agent_0"] = np.concatenate(([1e-5], action), dtype=np.float32)
+    next_state, rewards, terminations, truncations, infos = env.step(actions)
+
+    trajectory.append({"state":obs["agent_0"], "action":actions["agent_0"], "reward":rewards["agent_0"], "log_prob":log_prob})
+    obs = next_state
+
+  if i%5==0:
+    evaluate_policy(nn_agent, adversary_agents, env, n_eval_episodes)
+
+  policy_loss = nn_agent.train(trajectory)
 
 env.close()
