@@ -137,3 +137,6 @@ models/
 
 # tensorboard
 board/
+
+# video folder
+video/
