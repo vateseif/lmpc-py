@@ -11,7 +11,7 @@ def evaluate_policy(agent, adversary, env, eval_episodes = 10):
     avg_reward = 0
     while env.agents:
       actions = adversary.act(obs)
-      action, _ = agent(obs["agent_0"])
+      action, _, _ = agent(obs["agent_0"])
       actions["agent_0"] = np.concatenate(([1e-5], action), dtype=np.float32)
       next_state, rewards, terminations, truncations, infos = env.step(actions)
 
