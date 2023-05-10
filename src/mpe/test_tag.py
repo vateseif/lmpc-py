@@ -13,7 +13,7 @@ num_adversaries = 1
 num_obstacles = 2
 input_size = 4+2*num_obstacles+2*num_adversaries
 output_size = 4
-checkpoint = "models/tag/best_2023-05-10 15:30:13.281025.pth"
+checkpoint = "models/tag/1v1/best_2023-05-10 16:42:27.524928.pth"
 
 
 # init env

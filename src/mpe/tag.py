@@ -13,7 +13,7 @@ torch.manual_seed(2023)
 n_episodes = 20000
 n_frames_per_episode = 128
 n_eval_episodes = 5
-num_adversaries = 1
+num_adversaries = 2
 num_obstacles = 2
 input_size = 4+2*num_obstacles+2*num_adversaries
 output_size = 4
@@ -21,7 +21,7 @@ output_size = 4
 # tensorboard
 writer = SummaryWriter(f"board/tag/{datetime.now()}")
 
-save_best_model = SaveBestModel()
+save_best_model = SaveBestModel(num_good=1,  num_adversaries=num_adversaries)
 
 # init env
 env = simple_tag_v2.parallel_env(num_adversaries=num_adversaries, num_obstacles=num_obstacles, max_cycles=n_frames_per_episode, continuous_actions=True, render_mode='rgb')
