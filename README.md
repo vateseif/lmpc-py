@@ -3,7 +3,7 @@
 ## Tag
 ### 1 vs 1 (MPC vs RL)
 ![](tag.gif)
-
+![](2v1.gif)
 ### More to come...
 
 ## Setup

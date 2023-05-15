@@ -13,7 +13,7 @@ num_adversaries = 1
 num_obstacles = 2
 input_size = 4+2*num_obstacles+2*num_adversaries
 output_size = 4
-checkpoint = "models/tag/best_2023-05-08 23:49:37.237054.pth"
+checkpoint = "models/tag/1v1/best_2023-05-10 16:42:27.524928.pth"
 
 
 # init env
@@ -29,7 +29,7 @@ for i in range(n_episodes):
   obs = env.reset()
   while env.agents:
     actions = adversary_agents.act(obs)
-    action, log_prob = nn_agent(obs["agent_0"])
+    action, log_prob, _ = nn_agent(obs["agent_0"])
     actions["agent_0"] = np.concatenate(([1e-5], action), dtype=np.float32)
     obs, rewards, terminations, truncations, infos = env.step(actions)
 

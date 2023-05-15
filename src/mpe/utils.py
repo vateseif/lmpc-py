@@ -11,7 +11,7 @@ def evaluate_policy(agent, adversary, env, eval_episodes = 10):
     avg_reward = 0
     while env.agents:
       actions = adversary.act(obs)
-      action, _ = agent(obs["agent_0"])
+      action, _, _ = agent(obs["agent_0"])
       actions["agent_0"] = np.concatenate(([1e-5], action), dtype=np.float32)
       next_state, rewards, terminations, truncations, infos = env.step(actions)
 
@@ -28,8 +28,9 @@ class SaveBestModel:
   average reward is more than the previous highest, then save the
   model state.
   """
-  def __init__(self, best_avg_reward=-float('inf')):
+  def __init__(self, num_good, num_adversaries, best_avg_reward=-float('inf')):
     self.best_avg_reward = best_avg_reward
+    self.path = f"models/tag/{num_adversaries}v{num_good}"
       
   def __call__(self, current_avg_reward:float, epoch:int, model:torch.nn.Module, optimizer):
     if current_avg_reward > self.best_avg_reward:
@@ -41,5 +42,5 @@ class SaveBestModel:
           'model_state_dict': model.state_dict(),
           'optimizer_state_dict': optimizer.state_dict(),
           #'loss': criterion,
-          }, f'models/tag/best_{datetime.now()}.pth')
+          }, f'{self.path}/best_{datetime.now()}.pth')
   

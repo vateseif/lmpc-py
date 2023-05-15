@@ -126,6 +126,7 @@ class GaussianPolicy(nn.Module):
     ])
     self.mean = nn.Linear(hidden_size, out_size)
     self.log_std = nn.Linear(hidden_size, out_size)
+    self.value = nn.Linear(hidden_size, 1)
 
   def forward(self, inputs):
     # forward pass of NN
@@ -135,7 +136,8 @@ class GaussianPolicy(nn.Module):
     log_std = self.log_std(x) # if more than one action this will give you the diagonal elements of a diagonal covariance matrix
     log_std = torch.clamp(log_std, min=-2, max=20) # We limit the variance by forcing within a range of -0.2,0.2
     std = log_std.exp()
-    return mean, std
+    value = self.value(x)
+    return mean, std, value
 
 
 class NNAgent(nn.Module):
@@ -154,7 +156,7 @@ class NNAgent(nn.Module):
     
   def forward(self, obs: np.ndarray):
     obs = torch.from_numpy(obs).float().to(self.device)
-    mu, std = self.policy(obs) 
+    mu, std, value = self.policy(obs) 
     # init normal distribution
     normal = Normal(mu, std)
     # sample action and compute log probability
@@ -162,12 +164,13 @@ class NNAgent(nn.Module):
     log_prob = normal.log_prob(sample).sum()
     action = torch.sigmoid(sample) # bound actions from 0 to 1
 
-    return action.cpu().numpy(), log_prob.sum()
+    return action.cpu().numpy(), log_prob.sum(), value
 
 
   def train(self, trajectory: List[Dict[str,np.ndarray]]):
 
     states = [i["state"] for i in trajectory]
+    values = [i["value"] for i in trajectory]
     actions = [i["action"] for i in trajectory]
     rewards = [i["reward"] for i in trajectory]
     log_probs = [i["log_prob"] for i in trajectory]
@@ -178,16 +181,24 @@ class NNAgent(nn.Module):
     for r in rewards[::-1]:
         R = r + self.gamma * R
         returns.insert(0, R)
+
+    eps = np.finfo(np.float32).eps.item()
     returns = torch.tensor(returns).to(self.device)
+    returns = (returns - returns.mean()) / (returns.std() + eps)
 
     policy_loss = []
-    for log_prob, R in zip(log_probs, returns):
+    value_loss = []
+    for log_prob, value, R in zip(log_probs, values, returns):
       policy_loss.append( - log_prob * R)
 
-    policy_loss = torch.stack( policy_loss ).sum().to(self.device)
+      # calculate critic (value) loss using L1 smooth loss
+      value_loss.append(F.smooth_l1_loss(value, torch.tensor([R])))
+
+    # A2C loss: sum of policy and value loss
+    loss = torch.stack(policy_loss).sum().to(self.device) + torch.stack(value_loss).sum().to(self.device)
     # update policy weights
     self.optimizer.zero_grad()
-    policy_loss.backward()
+    loss.backward()
     self.optimizer.step()
     
-    return policy_loss
+    return loss
