@@ -7,7 +7,7 @@ def getAgent():
   N = 1
   Ns = 4
   Na = 4
-  T = 20
+  T = 15
   dt = 0.1        # TODO get val from env
   tau = 0.25      # TODO get val from env
   sensitivity = 5 # TODO get val from env
