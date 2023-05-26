@@ -140,3 +140,5 @@ board/
 
 # video folder
 video/
+
+deletable.*
