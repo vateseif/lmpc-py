@@ -10,3 +10,5 @@ matplotlib==3.7.1
 pettingzoo==1.22.3
 tensorboard==2.13.0
 stable_baselines3==1.8.0
+
+seaborn==0.12.2
