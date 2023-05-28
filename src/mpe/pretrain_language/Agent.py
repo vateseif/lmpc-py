@@ -12,22 +12,35 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 class Agent:
-  def __init__(self, dims) -> None:
-
-    self.planner: nn.Module = Planner()
-    self.speaker: nn.Module = MLPNetwork(dims["speaker_in"], dims["speaker_out"])
-    self.listener: nn.Module = MLPNetwork(dims["listener_in"], dims["listener_out"])
-    self.controller: nn.Module = MPCLayer()
+  def __init__(self, name, dims) -> None:
+    self.name = name
+    if name.startswith('speaker') or name.startswith('agent'):
+      self.speaker: nn.Module = MLPNetwork(dims["speaker_in"], dims["speaker_out"])
+    if name.startswith('listener') or name.startswith('agent'):
+      self.listener: nn.Module = MLPNetwork(dims["listener_in"], dims["listener_out"])
+      self.controller: nn.Module = MPCLayer()
+    
+    #self.planner: nn.Module = Planner()
+    
     pass
 
   def action(self, obs: torch.Tensor) -> Tuple[torch.Tensor]:
     batch_size, _ = obs.shape
-    listner_out = self.listener(obs)
-    speaker_in, xd, x_init = self.planner(obs, listner_out)
-    speaker_out = F.gumbel_softmax(self.speaker(speaker_in), hard=True)
-    controller_out = self.controller(x_init, xd)
-    action = torch.cat((torch.zeros((batch_size, 1)), controller_out, speaker_out), 1).squeeze(0).cpu().detach().numpy()
-    return action
+    
+    #speaker_in, xd, x_init = self.planner(obs, listener_out)
+    action = torch.empty((batch_size, 0))
+    if self.name.startswith('speaker') or self.name.startswith('agent'):
+      speaker_in = obs[:, 8:11] if self.name.startswith('agent') else obs 
+      speaker_out = F.gumbel_softmax(self.speaker(speaker_in), hard=True)
+      action = torch.cat((action, speaker_out), -1)
+    if self.name.startswith('listener') or self.name.startswith('agent'):
+      listener_out = self.listener(obs)
+      xd = torch.cat((listener_out, torch.zeros(batch_size, 2)), -1)
+      x_init = torch.cat((torch.zeros(batch_size, 2).to(device), obs[:, :2]), -1)
+      controller_out = self.controller(x_init, xd)
+      action = torch.cat((torch.zeros((batch_size, 1)), controller_out, action), 1)
+    
+    return action.squeeze(0).cpu().detach().numpy()
 
 
 class MLPNetwork(nn.Module):
