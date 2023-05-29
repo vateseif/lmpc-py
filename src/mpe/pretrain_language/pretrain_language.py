@@ -62,7 +62,7 @@ if __name__ == '__main__':
   speaker = MLPNetwork(dims[args.env_name]['speaker_in'], dims[args.env_name]['speaker_out'])
   listener = MLPNetwork(dims[args.env_name]['listener_in'], dims[args.env_name]['listener_out'])
   params = list(speaker.parameters()) + list(listener.parameters())
-  optimizer = torch.optim.Adam(params, lr=1e-3)
+  optimizer = torch.optim.Adam(params, lr=1e-4)
 
   loss_history = [] # store loss during training
   # training
@@ -87,7 +87,8 @@ if __name__ == '__main__':
     # backprop
     optimizer.zero_grad()
     target = landmarks_p[:,ix*2:(ix+1)*2]
-    lossfun = nn.L1Loss()
+    #lossfun = nn.L1Loss()
+    lossfun = nn.MSELoss()
     loss = lossfun(pred, target)
     loss.backward()
     optimizer.step()
