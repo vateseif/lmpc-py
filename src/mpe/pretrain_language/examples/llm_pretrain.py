@@ -7,14 +7,16 @@ import matplotlib.pyplot as plt
 from transformers import AutoTokenizer, GPT2Model, GPT2LMHeadModel
 from transformers.generation.configuration_utils import GenerationConfig
 
+# free up GPU memory
+torch.cuda.empty_cache()
 
 # params
 n_embed = 768
-batch_size = 16
+batch_size = 256
 
 # RL training params
-lr = 1e-3
-n_episodes = 100
+lr = 7e-4
+n_episodes = 1000
 n_landmarks = 3
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -28,7 +30,7 @@ listener_out = 2
 num_beams = 5
 early_stopping = True
 no_repeat_ngram_size = 1
-do_sample = True
+do_sample = False
 temperature = 0.9
 top_k = 50
 top_p = 0.9
@@ -59,6 +61,9 @@ class Speaker(nn.Module):
     # custom embedding layer for obs
     self.embed_obs = nn.Linear(speaker_in, n_embed)
 
+    # layer norm
+    self.embed_ln = nn.LayerNorm(n_embed)
+
 
   def forward(self, obs: torch.Tensor):
     ''' 
@@ -70,8 +75,8 @@ class Speaker(nn.Module):
     batch_size = obs.shape[0]
 
     # compute embeddings of observation (the color)
-    obs_embeddings = self.embed_obs(obs)
-    attention_mask = torch.ones((batch_size, obs_embeddings.shape[1]))
+    obs_embeddings = self.embed_ln(self.embed_obs(obs))
+    attention_mask = torch.ones((batch_size, obs_embeddings.shape[1])).to(device)
     # generate text (sampling based)
     msg = self.transformer.generate(
                           inputs_embeds=obs_embeddings,
@@ -108,6 +113,9 @@ class Listener(nn.Module):
     # custom embedding layer for processing input obs
     self.embed_obs = nn.Linear(listener_in, n_embed)
 
+    # layer norm
+    self.embed_ln = nn.LayerNorm(n_embed)
+
     # custom prediction layer for computing the action
     self.predict_action = nn.Linear(n_embed*(1+speaker_out), listener_out)
 
@@ -121,6 +129,7 @@ class Listener(nn.Module):
     word_embeddings = self.wte(msg)
     obs_embeddings = self.embed_obs(obs).unsqueeze(1)
     stacked_inputs = torch.cat((word_embeddings, obs_embeddings), 1)
+    stacked_inputs = self.embed_ln(stacked_inputs)
 
     # compute transformer hidden states
     hidden_state = self.transformer(inputs_embeds=stacked_inputs)['last_hidden_state']
@@ -140,7 +149,8 @@ if __name__ == '__main__':
   optimizer = torch.optim.Adam(params=list(speaker.parameters())+list(listener.parameters()), lr=lr)
 
   # loss function
-  lossfun = nn.L1Loss()
+  #lossfun = nn.L1Loss()
+  lossfun = nn.MSELoss()
 
   loss_history = []
 
@@ -150,7 +160,7 @@ if __name__ == '__main__':
     # sample target landmark indices
     ids = torch.randint(n_landmarks, (batch_size,))
     # speaker input
-    goal_landmarks = landmarks_c.repeat(batch_size, 1, 1)[ids].to(device)
+    goal_landmarks = (landmarks_c.repeat(batch_size, 1, 1)[ids]).to(device)
     # messages from speaker
     msg = speaker(goal_landmarks)
     # compute action from lisener
@@ -178,6 +188,26 @@ if __name__ == '__main__':
   plt.plot(loss_history)
   plt.xlabel('episode')
   plt.ylabel('l1 loss')
+  plt.ylim([0., 1.])
   title = f'pretraining language model GPT2'
   plt.title(title)
   plt.savefig(os.path.join(result_dir, title))
+
+  # dict with models
+  models = {
+    'speaker': {
+      'embed_obs':  speaker.embed_obs.state_dict(),
+      'embed_ln':   speaker.embed_ln.state_dict(),
+    }, 
+    'listener': {
+      'embed_obs':      listener.embed_obs.state_dict(),
+      'embed_ln':       listener.embed_ln.state_dict(),
+      'predict_action': listener.predict_action.state_dict()
+    }
+  }
+
+  # store models
+  torch.save(
+      models,  # actor parameter
+      os.path.join(result_dir, 'model.pt')
+  )
