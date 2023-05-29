@@ -27,7 +27,7 @@ def get_env(env_name, cfg):
   # get agents dimensions
   dims = {}
   for agent_id in env.agents:
-    agent_dims = {}
+    agent_dims = {'num_landmarks': cfg['num_landmarks']}
     if agent_id.startswith('speaker') or agent_id.startswith('agent'): 
       agent_dims['speaker_in'] = 3
       agent_dims['speaker_out'] = world.dim_c

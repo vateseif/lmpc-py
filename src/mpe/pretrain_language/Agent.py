@@ -14,6 +14,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 class Agent:
   def __init__(self, name, dims) -> None:
     self.name = name
+    self.num_landmarks = dims['num_landmarks']
     if name.startswith('speaker') or name.startswith('agent'):
       self.speaker: nn.Module = MLPNetwork(dims["speaker_in"], dims["speaker_out"])
     if name.startswith('listener') or name.startswith('agent'):
@@ -30,7 +31,8 @@ class Agent:
     #speaker_in, xd, x_init = self.planner(obs, listener_out)
     action = torch.empty((batch_size, 0))
     if self.name.startswith('speaker') or self.name.startswith('agent'):
-      speaker_in = obs[:, 8:11] if self.name.startswith('agent') else obs 
+      i1 = (1+self.num_landmarks)*2 # start index of goal_i
+      speaker_in = obs[:, i1:i1+3] if self.name.startswith('agent') else obs
       speaker_out = F.gumbel_softmax(self.speaker(speaker_in), hard=True)
       action = torch.cat((action, speaker_out), -1)
     if self.name.startswith('listener') or self.name.startswith('agent'):
