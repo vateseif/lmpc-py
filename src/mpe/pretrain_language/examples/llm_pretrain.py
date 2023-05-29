@@ -125,6 +125,8 @@ class Listener(nn.Module):
     msg: message from speaker indicating which landmark to go to
     '''
 
+    batch_size = obs.shape[0]
+
     # compute and stack embeddings
     word_embeddings = self.wte(msg)
     obs_embeddings = self.embed_obs(obs).unsqueeze(1)
