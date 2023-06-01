@@ -15,9 +15,9 @@ n_embed = 768
 batch_size = 256
 
 # RL training params
-lr = 7e-4
-n_episodes = 1000
-n_landmarks = 3
+lr = 4e-3
+n_episodes = 3000
+n_landmarks = 10
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # IO dimensions
