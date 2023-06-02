@@ -3,11 +3,12 @@ import json
 import torch
 import argparse
 import numpy as np
+import seaborn as sns
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 
 from torch import nn
-
+from tqdm import tqdm
 from random import randint
 
 from Agent import MLPNetwork
@@ -54,27 +55,32 @@ if __name__ == '__main__':
   env = name2env[args.env_name](num_agents=args.num_agents, num_landmarks=args.num_landmarks)
   obs = env.reset()
 
-  # landmark characteristics (in this case using colot)
-  landmarks_c = env.aec_env.env.env.world.colors
-  landmarks_c = [torch.tensor(l).unsqueeze(0) for l in landmarks_c]
+  # landamrk colors
+  landmarks_c = sns.color_palette(n_colors=args.num_landmarks)
+  landmarks_c = torch.tensor(landmarks_c).unsqueeze(1)
 
   # init speaker and listener
   speaker = MLPNetwork(dims[args.env_name]['speaker_in'], dims[args.env_name]['speaker_out'])
   listener = MLPNetwork(dims[args.env_name]['listener_in'], dims[args.env_name]['listener_out'])
   params = list(speaker.parameters()) + list(listener.parameters())
-  optimizer = torch.optim.Adam(params, lr=1e-4)
+  optimizer = torch.optim.Adam(params, lr=1e-3)
 
   loss_history = [] # store loss during training
+  lossfun = nn.MSELoss()
+
   # training
-  for i in range(args.num_episodes):
+  for i in tqdm(range(args.num_episodes)):
     # relative position of landmarks wrt to listener
     landmarks_p = (torch.rand((args.batch_size, 2*args.num_landmarks)) - 0.5) * 2
+    landmarks_xy = landmarks_p.reshape(args.batch_size, args.num_landmarks, 2)
     # velocity of listener
     vel = torch.rand((args.batch_size, 2))
-    # sample target landmark
-    ix = randint(0, args.num_landmarks-1)
+    # sample target landmark indices
+    ids = torch.randint(args.num_landmarks, (args.batch_size,))
+    # speaker input
+    goal_landmarks = (landmarks_c.repeat(args.batch_size, 1, 1)[ids]).squeeze(1)
     # pass through observer
-    msg = F.gumbel_softmax(speaker(landmarks_c[ix].repeat(args.batch_size, 1)), hard=True)
+    msg = F.gumbel_softmax(speaker(goal_landmarks), hard=False)
     # goal id (kinda useless to have it)
     goal_id = torch.cat(list(landmarks_c[randint(0, args.num_landmarks-1)] for _ in range(args.batch_size)), 0)
     # listener observation
@@ -86,9 +92,7 @@ if __name__ == '__main__':
     pred = listener(obs)
     # backprop
     optimizer.zero_grad()
-    target = landmarks_p[:,ix*2:(ix+1)*2]
-    #lossfun = nn.L1Loss()
-    lossfun = nn.MSELoss()
+    target = landmarks_xy[torch.arange(args.batch_size), ids]
     loss = lossfun(pred, target)
     loss.backward()
     optimizer.step()
