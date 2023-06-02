@@ -12,11 +12,11 @@ torch.cuda.empty_cache()
 
 # params
 n_embed = 768
-batch_size = 256
+batch_size = 64
 
 # RL training params
-lr = 4e-3
-n_episodes = 3000
+lr = 1e-3
+n_episodes = 8000
 n_landmarks = 10
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -159,6 +159,7 @@ if __name__ == '__main__':
   for i in tqdm(range(n_episodes)):
     # random landmark position
     landmarks_p = ((torch.rand((batch_size, 2*n_landmarks)) - 0.5) * 2).to(device)
+    landmarks_xy = landmarks_p.reshape(batch_size, n_landmarks, 2)
     # sample target landmark indices
     ids = torch.randint(n_landmarks, (batch_size,))
     # speaker input
@@ -168,7 +169,7 @@ if __name__ == '__main__':
     # compute action from lisener
     action = listener(landmarks_p, msg)
     # ground truth target actions
-    target = torch.cat([landmarks_p[i, ix*2:(ix+1)*2].unsqueeze(0) for i, ix in enumerate(ids)], 0)
+    target = landmarks_xy[torch.arange(batch_size), ids]
     # backprop
     optimizer.zero_grad()
     loss = lossfun(action, target)
