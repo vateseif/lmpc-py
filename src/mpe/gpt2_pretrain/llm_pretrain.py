@@ -75,7 +75,7 @@ class Speaker(nn.Module):
     batch_size = obs.shape[0]
 
     # compute embeddings of observation (the color)
-    obs_embeddings = self.embed_ln(self.embed_obs(obs))
+    obs_embeddings = self.embed_obs(obs)#self.embed_ln(self.embed_obs(obs))
     attention_mask = torch.ones((batch_size, obs_embeddings.shape[1])).to(device)
     # generate text (sampling based)
     msg = self.transformer.generate(
