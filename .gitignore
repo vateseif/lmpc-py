@@ -142,4 +142,7 @@ board/
 # video folder
 video/
 
+# images
+*.png
+
 deletable.*
