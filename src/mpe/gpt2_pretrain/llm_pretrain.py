@@ -12,11 +12,12 @@ torch.cuda.empty_cache()
 
 # params
 n_embed = 768
-batch_size = 64
+batch_size = 256
 
 # RL training params
 lr = 1e-3
-n_episodes = 8000
+n_episodes = 80
+n_iterations = 20
 n_landmarks = 10
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -75,7 +76,7 @@ class Speaker(nn.Module):
     batch_size = obs.shape[0]
 
     # compute embeddings of observation (the color)
-    obs_embeddings = self.embed_ln(self.embed_obs(obs))
+    obs_embeddings = self.embed_obs(obs)#self.embed_ln(self.embed_obs(obs))
     attention_mask = torch.ones((batch_size, obs_embeddings.shape[1])).to(device)
     # generate text (sampling based)
     msg = self.transformer.generate(
@@ -145,10 +146,14 @@ class Listener(nn.Module):
 if __name__ == '__main__':
   # init models
   speaker = Speaker().to(device)
+  #for param in speaker.parameters():
+  #  param.requires_grad = False
   listener = Listener().to(device)
 
   # init optimizer
-  optimizer = torch.optim.Adam(params=list(speaker.parameters())+list(listener.parameters()), lr=lr)
+  #optimizer = torch.optim.Adam(params=list(speaker.parameters())+list(listener.parameters()), lr=lr)
+  optimizer_l = torch.optim.Adam(params=list(listener.parameters()), lr=lr)
+  optimizer_s = torch.optim.Adam(params=list(speaker.parameters()), lr=1e-3)
 
   # loss function
   #lossfun = nn.L1Loss()
@@ -156,28 +161,42 @@ if __name__ == '__main__':
 
   loss_history = []
 
-  for i in tqdm(range(n_episodes)):
-    # random landmark position
-    landmarks_p = ((torch.rand((batch_size, 2*n_landmarks)) - 0.5) * 2).to(device)
-    landmarks_xy = landmarks_p.reshape(batch_size, n_landmarks, 2)
-    # sample target landmark indices
-    ids = torch.randint(n_landmarks, (batch_size,))
-    # speaker input
-    goal_landmarks = (landmarks_c.repeat(batch_size, 1, 1)[ids]).to(device)
-    # messages from speaker
-    msg = speaker(goal_landmarks)
-    # compute action from lisener
-    action = listener(landmarks_p, msg)
-    # ground truth target actions
-    target = landmarks_xy[torch.arange(batch_size), ids]
-    # backprop
-    optimizer.zero_grad()
-    loss = lossfun(action, target)
-    loss.backward()
-    optimizer.step()
-    
-    if i%10==0:
-      loss_history.append(loss.item())
+  for it in tqdm(range(n_iterations)):
+    if it%2==0:
+      speaker.eval()
+      listener.train()
+    else:
+      speaker.train()
+      listener.eval()
+    for i in range(n_episodes):
+      # random landmark position
+      landmarks_p = ((torch.rand((batch_size, 2*n_landmarks)) - 0.5) * 2).to(device)
+      landmarks_xy = landmarks_p.reshape(batch_size, n_landmarks, 2)
+      # sample target landmark indices
+      ids = torch.randint(n_landmarks, (batch_size,))
+      # speaker input
+      goal_landmarks = (landmarks_c.repeat(batch_size, 1, 1)[ids]).to(device)
+      # messages from speaker
+      msg = speaker(goal_landmarks)
+      # compute action from lisener
+      action = listener(landmarks_p, msg)
+      # ground truth target actions
+      target = landmarks_xy[torch.arange(batch_size), ids]
+      # backprop
+      if it%2==0:
+        optimizer_l.zero_grad()
+      else:
+        optimizer_s.zero_grad()
+      loss = lossfun(action, target)
+      loss.backward()
+      # backprop
+      if it%2==0:
+        optimizer_l.step()
+      else:
+        optimizer_s.step()
+      
+      if (it*n_episodes+i)%10==0:
+        loss_history.append(loss.item())
 
   # create folder to save result
   env_dir = os.path.join(os.path.abspath(''), 'results/', "GPT2")
