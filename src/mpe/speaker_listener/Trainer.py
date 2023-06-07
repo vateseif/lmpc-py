@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 
 from Agent import Listener, GumbelSpeaker, VQSpeaker
 
-envs = ['simple_speaker_listener_v3']
 speaker_types = ['VQ', 'Gumbel']
 
 class Trainer:
@@ -19,7 +18,7 @@ class Trainer:
   def __init__(self, num_agents=2, num_landmarks=3, lr=1e-2, alpha=10, s_type='VQ',
               frozen_speaker=True, alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZ", save_results=False) -> None:
     assert s_type in speaker_types, f"{s_type} is not in {speaker_types}"
-
+    # speaker type
     self.s_type = s_type
     # Env dims
     self.num_agents = num_agents
@@ -189,7 +188,7 @@ class Trainer:
       action = listener(obs)
       # compute centroid of chosen message
       centroid_xy, centroid_c = self.computeCentroid(msg_ix.item(), landmarks_xy_eval)
-
+      # plot
       axs[r[ix]][c[ix]].scatter([l for i, l in enumerate(landmarks_p_eval[0]) if i%2==0], [l for i, l in enumerate(landmarks_p_eval[0]) if i%2==1], marker='o', c=self.landmarks_c.squeeze())
       axs[r[ix]][c[ix]].scatter(centroid_xy[0, 0], centroid_xy[0, 1], marker='v', c=centroid_c, label='centroid')
       axs[r[ix]][c[ix]].scatter(action[0,0].detach().numpy(), action[0,1].detach().numpy(), marker='x', c=self.landmarks_c[ix], label='listener')
@@ -198,7 +197,7 @@ class Trainer:
 
     # access each axes object via ax.flat
     for ax in axs.flat:
-      ## check if something was plotted 
+      # check if something was plotted 
       if not bool(ax.has_data()):
           fig.delaxes(ax) # delete if nothing is plotted in the axes obj
 
