@@ -111,10 +111,12 @@ if __name__ == '__main__':
 
   # save loss plot
   plt.plot(loss_history)
-  plt.xlabel('episode')
-  plt.ylabel('l1 loss')
-  title = f'pretraining language model {args.env_name}'
+  title = "Training loss $||p_{listener} - p_{landmark}||$"
   plt.title(title)
+  plt.ylabel(f"MSE loss")
+  plt.xlabel("Iterations")
+  #title = f'pretraining language model {args.env_name}'
+  #plt.title(title)
   plt.savefig(os.path.join(result_dir, title))
 
   # dict with models
