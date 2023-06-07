@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from Agent import Listener, GumbelSpeaker, VQSpeaker
 
 speaker_types = ['VQ', 'Gumbel']
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 class Trainer:
 
@@ -39,9 +40,10 @@ class Trainer:
 
     # landamrk colors
     self.landmarks_c = sns.color_palette(cc.glasbey, n_colors=num_landmarks)
-    self.landmarks_c = torch.tensor(self.landmarks_c).unsqueeze(1)
+    self.landmarks_c = torch.tensor(self.landmarks_c).unsqueeze(1).to(device)
 
     # init speaker and listeners
+    self.listener = Listener(self.listener_in, self.listener_out)
     if s_type == 'VQ':
       # VQ kwargs
       vq_kwargs = {'dim':self.n_tokens, 'codebook_size':self.n_tokens, 'decay':0.95, 'threshold_ema_dead_code':2}
@@ -49,7 +51,9 @@ class Trainer:
     else:
       self.speaker = GumbelSpeaker(self.speaker_in, self.speaker_out)
     
-    self.listener = Listener(self.listener_in, self.listener_out)
+    # load models to device
+    self.speaker.to(device)
+    self.listener.to(device)
 
     # optimizer
     self.optimizer = torch.optim.Adam(list(self.speaker.parameters())+list(self.listener.parameters()), lr=lr)
@@ -64,7 +68,7 @@ class Trainer:
       if not os.path.exists(env_dir):
         os.makedirs(env_dir)
       total_files = len([file for file in os.listdir(env_dir)])
-      self.result_dir = os.path.join(env_dir, f'{total_files + 1}')
+      self.result_dir = os.path.join(env_dir, f'{total_files + 1}_{s_type}_{num_landmarks}')
       self.speaker_vocabulary_dir = os.path.join(self.result_dir, 'speaker_vocabulary/')
       # create dir  for this training
       os.makedirs(self.result_dir)
@@ -77,22 +81,22 @@ class Trainer:
     plt.title('Color palette')
 
 
-  def train(self, loss_fun=nn.MSELoss(), epochs=2000, batch_size=1024):
+  def train(self, loss_fun=nn.MSELoss(), epochs=2000, batch_size=1024, show=False):
     loss_history = []
     for i in tqdm(range(epochs)):
       # relative position of landmarks wrt to listener
-      landmarks_p = (torch.rand((batch_size, 2*self.num_landmarks)) - 0.5) * 2
+      landmarks_p = ((torch.rand((batch_size, 2*self.num_landmarks)) - 0.5) * 2).to(device)
       landmarks_xy = landmarks_p.reshape(batch_size, self.num_landmarks, 2)
       # velocity of listener
-      vel = torch.rand((batch_size, 2))
+      vel = torch.rand((batch_size, 2)).to(device)
       # sample target landmark indices
-      ids = torch.randint(self.num_landmarks, (batch_size,))
+      ids = torch.randint(self.num_landmarks, (batch_size,)).to(device)
       # speaker input
-      goal_landmarks = (self.landmarks_c.repeat(batch_size, 1, 1)[ids]).squeeze(1)
+      goal_landmarks = ((self.landmarks_c.repeat(batch_size, 1, 1)[ids]).squeeze(1)).to(device)
       # pass through observer
       msg, _, cmt_loss = self.speaker(goal_landmarks)
       # goal id (kinda useless to have it)
-      goal_id = torch.cat(list(self.landmarks_c[randint(0, self.num_landmarks-1)] for _ in range(batch_size)), 0)
+      goal_id = torch.cat(list(self.landmarks_c[randint(0, self.num_landmarks-1)] for _ in range(batch_size)), 0).to(device)
       # listener obesrvation
       obs = torch.cat((vel, landmarks_p, goal_id, msg), 1)
       # predict landmark pos
@@ -111,7 +115,7 @@ class Trainer:
           self.save_speaker_vocabulary(it)
 
     # plot loss
-    self.plot_loss(loss_history)    
+    self.plot_loss(loss_history, show)    
 
 
   def export_models(self):
@@ -146,9 +150,9 @@ class Trainer:
     plt.close()
     
 
-  def plot_loss(self, loss_history):
+  def plot_loss(self, loss_history, show):
     # Smoothing parameters
-    window_size = 5
+    window_size = 10
     # Calculate the moving average
     smoothed_loss = np.convolve(loss_history, np.ones(window_size) / window_size, mode='valid')
     plt.plot(loss_history, 'b', alpha=0.5)
@@ -160,8 +164,11 @@ class Trainer:
     if self.save_results:
       plt.savefig(os.path.join(self.result_dir, "loss"))
 
+    if not show:
+      plt.close()
 
-  def evaluate(self):
+
+  def evaluate(self, show=False):
     # get models in eval mode
     speaker, listener = self.export_models()
     # compute msgLandmarkMap
@@ -179,7 +186,7 @@ class Trainer:
     landmarks_p_eval = (torch.rand((1, 2*self.num_landmarks)) - 0.5) * 2
     landmarks_xy_eval = landmarks_p_eval.reshape(1, self.num_landmarks, 2)
     for ix in range(self.num_landmarks):
-      vel = torch.rand((1, 2))
+      vel = torch.rand((1, 2)).to(device)
       # pass through observer
       msg, msg_ix, _ = speaker(self.landmarks_c[ix].repeat(1, 1))
       # listener observation
@@ -204,4 +211,7 @@ class Trainer:
     if self.save_results:
       # Save figure
       fig.savefig(os.path.join(self.result_dir, 'evaluation'), bbox_inches='tight')
+
+    if not show:
+      plt.close()
     
