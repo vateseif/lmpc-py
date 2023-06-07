@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import torch
 import torch.nn as nn
 import seaborn as sns
@@ -11,13 +12,15 @@ import matplotlib.pyplot as plt
 from Agent import Listener, GumbelSpeaker, VQSpeaker
 
 envs = ['simple_speaker_listener_v3']
-speaker_types = ['vq', 'gumbel']
+speaker_types = ['VQ', 'Gumbel']
 
 class Trainer:
 
-  def __init__(self, num_agents=2, num_landmarks=3, lr=1e-2, alpha=10, s_type='vq',
-              frozen_speaker=True, alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZ") -> None:
+  def __init__(self, num_agents=2, num_landmarks=3, lr=1e-2, alpha=10, s_type='VQ',
+              frozen_speaker=True, alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZ", save_results=False) -> None:
     assert s_type in speaker_types, f"{s_type} is not in {speaker_types}"
+
+    self.s_type = s_type
     # Env dims
     self.num_agents = num_agents
     self.num_landmarks = num_landmarks
@@ -40,7 +43,7 @@ class Trainer:
     self.landmarks_c = torch.tensor(self.landmarks_c).unsqueeze(1)
 
     # init speaker and listeners
-    if s_type == 'vq':
+    if s_type == 'VQ':
       # VQ kwargs
       vq_kwargs = {'dim':self.n_tokens, 'codebook_size':self.n_tokens, 'decay':0.95, 'threshold_ema_dead_code':2}
       self.speaker = VQSpeaker(self.speaker_in, self.speaker_out, vq_kwargs, frozen=frozen_speaker)
@@ -55,12 +58,27 @@ class Trainer:
     # VQ alpha param
     self.alpha = alpha
 
+    # create dir where to save results
+    self.save_results = save_results
+    if self.save_results:
+      env_dir = os.path.join(os.path.abspath(''), 'results/')
+      if not os.path.exists(env_dir):
+        os.makedirs(env_dir)
+      total_files = len([file for file in os.listdir(env_dir)])
+      self.result_dir = os.path.join(env_dir, f'{total_files + 1}')
+      self.speaker_vocabulary_dir = os.path.join(self.result_dir, 'speaker_vocabulary/')
+      # create dir  for this training
+      os.makedirs(self.result_dir)
+      # create dir for speaker_vocabulary
+      os.makedirs(self.speaker_vocabulary_dir)
+
+
   def plot_color_palette(self):
     plt.scatter(list(range(self.num_landmarks)), [0 for _ in range(self.num_landmarks)], marker='o', c=self.landmarks_c.squeeze())
     plt.title('Color palette')
 
 
-  def train(self, loss_fun=nn.MSELoss(), epochs=2000, batch_size=1024, save_plot=False):
+  def train(self, loss_fun=nn.MSELoss(), epochs=2000, batch_size=1024):
     loss_history = []
     for i in tqdm(range(epochs)):
       # relative position of landmarks wrt to listener
@@ -86,25 +104,15 @@ class Trainer:
       loss = loss_fun(pred, target) + self.alpha * cmt_loss
       loss.backward()
       self.optimizer.step()
-
-      if i%100==0:
-        loss_history.append(loss.item())
+      loss_history.append(loss.item())
+      # save speaker vocabulary every 10% of training
+      if i%(epochs/10)==0:
+        it = (i * 100) // epochs        
+        if self.save_results:
+          self.save_speaker_vocabulary(it)
 
     # plot loss
-    plt.plot(loss_history)
-    plt.title("Training loss $||p_{listener} - p_{landmark}||$")
-    plt.ylabel(f"MSE loss")
-    plt.xlabel("Iterations")
-
-    # if save_dir given then save the plot
-    if save_plot:
-      env_dir = os.path.join(os.path.abspath(''), 'results/')
-      if not os.path.exists(env_dir):
-        os.makedirs(env_dir)
-      total_files = len([file for file in os.listdir(env_dir)])
-      result_dir = os.path.join(env_dir, f'{total_files + 1}')
-      os.makedirs(result_dir)
-      plt.savefig(os.path.join(result_dir, "loss"))    
+    self.plot_loss(loss_history)    
 
 
   def export_models(self):
@@ -123,6 +131,36 @@ class Trainer:
     for i in range(self.num_landmarks):
       _, msg_ix, _ = speaker(self.landmarks_c[i])
       self.msgLandmarkMap[msg_ix.item()].append(i)
+
+  def save_speaker_vocabulary(self, it):
+    # get speaker in eval mode
+    speaker, _ = self.export_models()
+    
+    plt.figure(figsize=(12,1))
+    plt.scatter(list(range(self.num_landmarks)), [0 for _ in range(self.num_landmarks)], marker='o', c=self.landmarks_c.squeeze())
+    for i in range(self.num_landmarks):
+      _, msg_ix, _ = speaker(self.landmarks_c[i])
+      plt.text(i-0.06, 0.01, self.alphabet[msg_ix])
+    plt.title(f'Speaker vocabulary at {it}% training')
+    plt.axis('off')
+    plt.savefig(os.path.join(self.speaker_vocabulary_dir, f"vocabulary_{it}%"), bbox_inches='tight')
+    plt.close()
+    
+
+  def plot_loss(self, loss_history):
+    # Smoothing parameters
+    window_size = 5
+    # Calculate the moving average
+    smoothed_loss = np.convolve(loss_history, np.ones(window_size) / window_size, mode='valid')
+    plt.plot(loss_history, 'b', alpha=0.5)
+    plt.plot(smoothed_loss, 'b')
+    plt.title(f"{self.s_type} training loss: {self.num_landmarks} landmarks ")
+    plt.ylabel("MSE loss $||p_{listener} - p_{landmark}||$")
+    plt.xlabel(f"Iterations")
+    # if save_dir given then save the plot
+    if self.save_results:
+      plt.savefig(os.path.join(self.result_dir, "loss"))
+
 
   def evaluate(self):
     # get models in eval mode
@@ -163,4 +201,8 @@ class Trainer:
       ## check if something was plotted 
       if not bool(ax.has_data()):
           fig.delaxes(ax) # delete if nothing is plotted in the axes obj
+
+    if self.save_results:
+      # Save figure
+      fig.savefig(os.path.join(self.result_dir, 'evaluation'), bbox_inches='tight')
     
