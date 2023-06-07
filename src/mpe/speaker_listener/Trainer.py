@@ -127,7 +127,7 @@ class Trainer:
     """Given a message (the argmax) it checks which other landmarks use the same msg and computes the centroid and the mean color"""
     xy = torch.mean(l_xy[:,self.msgLandmarkMap[msg]], dim=1)
     c = torch.mean(self.landmarks_c[self.msgLandmarkMap[msg]], dim=0)
-    return xy, c
+    return xy.cpu(), c.cpu()
 
   def compute_msgLandmarkMap(self, speaker):
     self.msgLandmarkMap = {i: [] for  i in range(self.n_tokens)}
@@ -140,7 +140,7 @@ class Trainer:
     speaker, _ = self.export_models()
     
     plt.figure(figsize=(12,1))
-    plt.scatter(list(range(self.num_landmarks)), [0 for _ in range(self.num_landmarks)], marker='o', c=self.landmarks_c.squeeze())
+    plt.scatter(list(range(self.num_landmarks)), [0 for _ in range(self.num_landmarks)], marker='o', c=self.landmarks_c.squeeze().cpu())
     for i in range(self.num_landmarks):
       _, msg_ix, _ = speaker(self.landmarks_c[i])
       plt.text(i-0.06, 0.01, self.alphabet[msg_ix])
@@ -183,7 +183,7 @@ class Trainer:
     r = list(range(nrows)) * 2
     c = [0]*nrows + [1]*nrows
     # init random landmarks pos
-    landmarks_p_eval = (torch.rand((1, 2*self.num_landmarks)) - 0.5) * 2
+    landmarks_p_eval = ((torch.rand((1, 2*self.num_landmarks)) - 0.5) * 2).to(device)
     landmarks_xy_eval = landmarks_p_eval.reshape(1, self.num_landmarks, 2)
     for ix in range(self.num_landmarks):
       vel = torch.rand((1, 2)).to(device)
@@ -196,11 +196,11 @@ class Trainer:
       # compute centroid of chosen message
       centroid_xy, centroid_c = self.computeCentroid(msg_ix.item(), landmarks_xy_eval)
       # plot
-      axs[r[ix]][c[ix]].scatter([l for i, l in enumerate(landmarks_p_eval[0]) if i%2==0], [l for i, l in enumerate(landmarks_p_eval[0]) if i%2==1], marker='o', c=self.landmarks_c.squeeze())
+      axs[r[ix]][c[ix]].scatter([l for i, l in enumerate(landmarks_p_eval.cpu()[0]) if i%2==0], [l for i, l in enumerate(landmarks_p_eval.cpu()[0]) if i%2==1], marker='o', c=self.landmarks_c.squeeze().cpu())
       axs[r[ix]][c[ix]].scatter(centroid_xy[0, 0], centroid_xy[0, 1], marker='v', c=centroid_c, label='centroid')
-      axs[r[ix]][c[ix]].scatter(action[0,0].detach().numpy(), action[0,1].detach().numpy(), marker='x', c=self.landmarks_c[ix], label='listener')
+      axs[r[ix]][c[ix]].scatter(action[0,0].cpu().detach().numpy(), action[0,1].cpu().detach().numpy(), marker='x', c=self.landmarks_c.cpu()[ix], label='listener')
       axs[r[ix]][c[ix]].legend(loc='best')
-      axs[r[ix]][c[ix]].set_title(f"message: {self.alphabet[msg_ix.item()]}")
+      axs[r[ix]][c[ix]].set_title(f"message: {self.alphabet[msg_ix.cpu().item()]}")
 
     # access each axes object via ax.flat
     for ax in axs.flat:
