@@ -9,9 +9,9 @@ from copy import deepcopy
 from random import randint
 import matplotlib.pyplot as plt
 
-from Agent import Listener, GumbelSpeaker, VQSpeaker
+from Agent import Listener, GumbelSpeaker, VQSpeaker, ContinuousSpeaker
 
-speaker_types = ['VQ', 'Gumbel']
+speaker_types = ['VQ', 'Gumbel', 'Continuous']
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 class Trainer:
@@ -48,8 +48,10 @@ class Trainer:
       # VQ kwargs
       vq_kwargs = {'dim':self.n_tokens, 'codebook_size':self.n_tokens, 'decay':0.95, 'threshold_ema_dead_code':2}
       self.speaker = VQSpeaker(self.speaker_in, self.speaker_out, vq_kwargs, frozen=frozen_speaker)
-    else:
+    elif s_type == 'Gumbel':
       self.speaker = GumbelSpeaker(self.speaker_in, self.speaker_out)
+    else:
+      self.speaker = ContinuousSpeaker(self.speaker_in, self.speaker_out)
     
     # load models to device
     self.speaker.to(device)
@@ -111,7 +113,7 @@ class Trainer:
       # save speaker vocabulary every 10% of training
       if i%(epochs/10)==0:
         it = (i * 100) // epochs        
-        if self.save_results:
+        if self.save_results and self.s_type != "Continuous":
           self.save_speaker_vocabulary(it)
 
     # plot loss
@@ -172,7 +174,8 @@ class Trainer:
     # get models in eval mode
     speaker, listener = self.export_models()
     # compute msgLandmarkMap
-    self.compute_msgLandmarkMap(speaker)
+    if self.s_type != "Continuous":
+      self.compute_msgLandmarkMap(speaker)
 
     # create subplots
     nrows = -(self.num_landmarks // -2) # ceil division
@@ -193,14 +196,17 @@ class Trainer:
       obs = torch.cat((vel, landmarks_p_eval, self.landmarks_c[randint(0, self.num_landmarks-1)], msg), 1)  
       # predict landmark pos
       action = listener(obs)
-      # compute centroid of chosen message
-      centroid_xy, centroid_c = self.computeCentroid(msg_ix.item(), landmarks_xy_eval)
       # plot
       axs[r[ix]][c[ix]].scatter([l for i, l in enumerate(landmarks_p_eval.cpu()[0]) if i%2==0], [l for i, l in enumerate(landmarks_p_eval.cpu()[0]) if i%2==1], marker='o', c=self.landmarks_c.squeeze().cpu())
-      axs[r[ix]][c[ix]].scatter(centroid_xy[0, 0], centroid_xy[0, 1], marker='v', c=centroid_c, label='centroid')
       axs[r[ix]][c[ix]].scatter(action[0,0].cpu().detach().numpy(), action[0,1].cpu().detach().numpy(), marker='x', c=self.landmarks_c.cpu()[ix], label='listener')
       axs[r[ix]][c[ix]].legend(loc='best')
-      axs[r[ix]][c[ix]].set_title(f"message: {self.alphabet[msg_ix.cpu().item()]}")
+      # compute centroid of chosen message
+      if self.s_type != "Continuous":
+        centroid_xy, centroid_c = self.computeCentroid(msg_ix.item(), landmarks_xy_eval)
+        axs[r[ix]][c[ix]].scatter(centroid_xy[0, 0], centroid_xy[0, 1], marker='v', c=centroid_c, label='centroid')
+        axs[r[ix]][c[ix]].set_title(f"message: {self.alphabet[msg_ix.cpu().item()]}")
+      else:
+        axs[r[ix]][c[ix]].set_title(f"message: [{np.round(msg.cpu().detach().numpy()[0], 1)}]")
 
     # access each axes object via ax.flat
     for ax in axs.flat:

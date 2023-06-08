@@ -5,6 +5,18 @@ from vector_quantize_pytorch import VectorQuantize
 
 
 
+class ContinuousSpeaker(nn.Module):
+  def __init__(self, in_dim, out_dim) -> None:
+    super(ContinuousSpeaker, self).__init__()
+    # init simple mlp
+    self.mlp = MLPNetwork(in_dim, out_dim)
+
+  def forward(self, obs):
+    # apply simple forward through mlp
+    msg = self.mlp(obs)
+    # return one-hot msg, msg index, 0=cmt_loss
+    return msg, msg.argmax(1), 0
+
 class GumbelSpeaker(nn.Module):
   def __init__(self, in_dim, out_dim) -> None:
     super(GumbelSpeaker, self).__init__()
