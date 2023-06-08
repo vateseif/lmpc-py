@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from Trainer import Trainer
 
 min_landmarks = 3
-max_landmarks = 5 # len of alphabet
+max_landmarks = 26 # len of alphabet
 landmarks_range = list(range(min_landmarks, max_landmarks+1))
 
 s_types = ["VQ", "Gumbel", "Continuous"] # types of speaker to test
