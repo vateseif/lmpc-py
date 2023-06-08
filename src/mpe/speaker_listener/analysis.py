@@ -1,4 +1,5 @@
 import os
+import numpy as np
 from itertools import product
 import matplotlib.pyplot as plt
 
@@ -13,10 +14,12 @@ average_distances = {s:[] for s in s_types} # distances to target landmark durin
 
 if __name__ == "__main__":
   for n, s in product(landmarks_range, s_types):
-    trainer = Trainer(num_landmarks=n, s_type=s, save_results=True)
-    trainer.train()
-    avg_dist = trainer.evaluate()
-    average_distances[s].append(avg_dist) # store avg distance
+    dist = []
+    for _ in range(4):
+      trainer = Trainer(num_landmarks=n, s_type=s, save_results=False)
+      trainer.train()
+      dist.append(trainer.evaluate()) # repeat eval 4 times
+    average_distances[s].append(np.mean(dist)) # store avg distance
 
   # plot avg distances for each s_type during training
   for s in s_types:

@@ -65,10 +65,10 @@ class Trainer:
 
     # create dir where to save results
     self.save_results = save_results
-    if self.save_results:
-      self.env_dir = os.path.join(os.path.abspath(''), 'results/')
-      if not os.path.exists(self.env_dir):
+    self.env_dir = os.path.join(os.path.abspath(''), 'results/')
+    if not os.path.exists(self.env_dir):
         os.makedirs(self.env_dir)
+    if self.save_results:
       total_files = len([file for file in os.listdir(self.env_dir)])
       self.result_dir = os.path.join(self.env_dir, f'{total_files + 1}_{s_type}_{num_landmarks}')
       self.speaker_vocabulary_dir = os.path.join(self.result_dir, 'speaker_vocabulary/')
@@ -117,7 +117,8 @@ class Trainer:
           self.save_speaker_vocabulary(it)
 
     # plot loss
-    self.plot_loss(loss_history, show)    
+    if self.save_results or show:
+      self.plot_loss(loss_history, show)    
 
 
   def export_models(self):
@@ -201,22 +202,24 @@ class Trainer:
       # compute dist
       average_distance.append(np.linalg.norm(action[0].cpu().detach().numpy() - landmarks_xy_eval.cpu().detach().numpy()[0][ix]))
       # plot
-      axs[r[ix]][c[ix]].scatter([l for i, l in enumerate(landmarks_p_eval.cpu()[0]) if i%2==0], [l for i, l in enumerate(landmarks_p_eval.cpu()[0]) if i%2==1], marker='o', c=self.landmarks_c.squeeze().cpu())
-      axs[r[ix]][c[ix]].scatter(action[0,0].cpu().detach().numpy(), action[0,1].cpu().detach().numpy(), marker='x', c=self.landmarks_c.cpu()[ix], label='listener')
-      axs[r[ix]][c[ix]].legend(loc='best')
-      # compute centroid of chosen message
-      if self.s_type != "Continuous":
-        centroid_xy, centroid_c = self.computeCentroid(msg_ix.item(), landmarks_xy_eval)
-        axs[r[ix]][c[ix]].scatter(centroid_xy[0, 0], centroid_xy[0, 1], marker='v', c=centroid_c, label='centroid')
-        axs[r[ix]][c[ix]].set_title(f"message: {self.alphabet[msg_ix.cpu().item()]}")
-      else:
-        axs[r[ix]][c[ix]].set_title(f"message: [{np.round(msg.cpu().detach().numpy()[0], 1)}]")
+      if self.save_results or show:
+        axs[r[ix]][c[ix]].scatter([l for i, l in enumerate(landmarks_p_eval.cpu()[0]) if i%2==0], [l for i, l in enumerate(landmarks_p_eval.cpu()[0]) if i%2==1], marker='o', c=self.landmarks_c.squeeze().cpu())
+        axs[r[ix]][c[ix]].scatter(action[0,0].cpu().detach().numpy(), action[0,1].cpu().detach().numpy(), marker='x', c=self.landmarks_c.cpu()[ix], label='listener')
+        axs[r[ix]][c[ix]].legend(loc='best')
+        # compute centroid of chosen message
+        if self.s_type != "Continuous":
+          centroid_xy, centroid_c = self.computeCentroid(msg_ix.item(), landmarks_xy_eval)
+          axs[r[ix]][c[ix]].scatter(centroid_xy[0, 0], centroid_xy[0, 1], marker='v', c=centroid_c, label='centroid')
+          axs[r[ix]][c[ix]].set_title(f"message: {self.alphabet[msg_ix.cpu().item()]}")
+        else:
+          axs[r[ix]][c[ix]].set_title(f"message: [{np.round(msg.cpu().detach().numpy()[0], 1)}]")
 
-    # access each axes object via ax.flat
-    for ax in axs.flat:
-      # check if something was plotted 
-      if not bool(ax.has_data()):
-          fig.delaxes(ax) # delete if nothing is plotted in the axes obj
+    if self.save_results or show:
+      # access each axes object via ax.flat
+      for ax in axs.flat:
+        # check if something was plotted 
+        if not bool(ax.has_data()):
+            fig.delaxes(ax) # delete if nothing is plotted in the axes obj
 
     if self.save_results:
       # Save figure
