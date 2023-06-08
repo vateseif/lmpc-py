@@ -66,11 +66,11 @@ class Trainer:
     # create dir where to save results
     self.save_results = save_results
     if self.save_results:
-      env_dir = os.path.join(os.path.abspath(''), 'results/')
-      if not os.path.exists(env_dir):
-        os.makedirs(env_dir)
-      total_files = len([file for file in os.listdir(env_dir)])
-      self.result_dir = os.path.join(env_dir, f'{total_files + 1}_{s_type}_{num_landmarks}')
+      self.env_dir = os.path.join(os.path.abspath(''), 'results/')
+      if not os.path.exists(self.env_dir):
+        os.makedirs(self.env_dir)
+      total_files = len([file for file in os.listdir(self.env_dir)])
+      self.result_dir = os.path.join(self.env_dir, f'{total_files + 1}_{s_type}_{num_landmarks}')
       self.speaker_vocabulary_dir = os.path.join(self.result_dir, 'speaker_vocabulary/')
       # create dir  for this training
       os.makedirs(self.result_dir)
@@ -164,7 +164,7 @@ class Trainer:
     plt.xlabel(f"Iterations")
     # if save_dir given then save the plot
     if self.save_results:
-      plt.savefig(os.path.join(self.result_dir, "loss"))
+      plt.savefig(os.path.join(self.result_dir, f"loss_{self.num_landmarks}"))
 
     if not show:
       plt.close()
@@ -188,6 +188,8 @@ class Trainer:
     # init random landmarks pos
     landmarks_p_eval = ((torch.rand((1, 2*self.num_landmarks)) - 0.5) * 2).to(device)
     landmarks_xy_eval = landmarks_p_eval.reshape(1, self.num_landmarks, 2)
+    # store final distance between listener and target landmark
+    average_distance = []
     for ix in range(self.num_landmarks):
       vel = torch.rand((1, 2)).to(device)
       # pass through observer
@@ -196,6 +198,8 @@ class Trainer:
       obs = torch.cat((vel, landmarks_p_eval, self.landmarks_c[randint(0, self.num_landmarks-1)], msg), 1)  
       # predict landmark pos
       action = listener(obs)
+      # compute dist
+      average_distance.append(np.linalg.norm(action[0].cpu().detach().numpy() - landmarks_xy_eval.cpu().detach().numpy()[0][ix]))
       # plot
       axs[r[ix]][c[ix]].scatter([l for i, l in enumerate(landmarks_p_eval.cpu()[0]) if i%2==0], [l for i, l in enumerate(landmarks_p_eval.cpu()[0]) if i%2==1], marker='o', c=self.landmarks_c.squeeze().cpu())
       axs[r[ix]][c[ix]].scatter(action[0,0].cpu().detach().numpy(), action[0,1].cpu().detach().numpy(), marker='x', c=self.landmarks_c.cpu()[ix], label='listener')
@@ -216,8 +220,10 @@ class Trainer:
 
     if self.save_results:
       # Save figure
-      fig.savefig(os.path.join(self.result_dir, 'evaluation'), bbox_inches='tight')
+      fig.savefig(os.path.join(self.result_dir, f'evaluation_{self.num_landmarks}'), bbox_inches='tight')
 
     if not show:
       plt.close()
+
+    return np.mean(average_distance)
     
