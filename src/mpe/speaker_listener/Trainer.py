@@ -46,7 +46,7 @@ class Trainer:
     self.listener = Listener(self.listener_in, self.listener_out)
     if s_type == 'VQ':
       # VQ kwargs
-      vq_kwargs = {'dim':self.n_tokens, 'codebook_size':self.n_tokens, 'decay':0.95, 'threshold_ema_dead_code':2}
+      vq_kwargs = {'dim':self.n_tokens, 'codebook_size':self.n_tokens, 'decay':1-1e-1, 'threshold_ema_dead_code':2}
       self.speaker = VQSpeaker(self.speaker_in, self.speaker_out, vq_kwargs, frozen=frozen_speaker)
     elif s_type == 'Gumbel':
       self.speaker = GumbelSpeaker(self.speaker_in, self.speaker_out)
@@ -205,7 +205,6 @@ class Trainer:
       if self.save_results or show:
         axs[r[ix]][c[ix]].scatter([l for i, l in enumerate(landmarks_p_eval.cpu()[0]) if i%2==0], [l for i, l in enumerate(landmarks_p_eval.cpu()[0]) if i%2==1], marker='o', c=self.landmarks_c.squeeze().cpu())
         axs[r[ix]][c[ix]].scatter(action[0,0].cpu().detach().numpy(), action[0,1].cpu().detach().numpy(), marker='x', c=self.landmarks_c.cpu()[ix], label='listener')
-        axs[r[ix]][c[ix]].legend(loc='best')
         # compute centroid of chosen message
         if self.s_type != "Continuous":
           centroid_xy, centroid_c = self.computeCentroid(msg_ix.item(), landmarks_xy_eval)
@@ -213,6 +212,7 @@ class Trainer:
           axs[r[ix]][c[ix]].set_title(f"message: {self.alphabet[msg_ix.cpu().item()]}")
         else:
           axs[r[ix]][c[ix]].set_title(f"message: [{np.round(msg.cpu().detach().numpy()[0], 1)}]")
+        axs[r[ix]][c[ix]].legend(loc='best')
 
     if self.save_results or show:
       # access each axes object via ax.flat
