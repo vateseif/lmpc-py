@@ -10,13 +10,15 @@ class PID:
     self.desired_state = np.zeros((dim,))
     
     # pid parameters
-    self.P = 1.0
-    self.I = 0.0
-    self.D = 0.0
+    self.P = 0.0    # target = 50.0
+    self.I = 0.0    # target = 0.005
+    self.D = 0.0    # target = 1.0
     self.parameters = {'P':self.P, 'I':self.I, 'D':self.D}
 
+    self.dt = 0.02 # = tau in cartpole
+
     # weight on tracking error for each state (=1 they are valued equally)
-    self.mask = np.ones((dim,))
+    self.mask = np.array([0.1, 0.1, 1.0, 0.1])
 
     self.integral = 0.    # accumulated error
     self.derivative = 0.  # derivative error
@@ -26,7 +28,6 @@ class PID:
     self.integral = 0.    # accumulated error
     self.derivative = 0.  # derivative error
     self.prev_error = 0.  # previous error
-    pass
 
   def update(self, parameter_name:str, parameter_value:float):
     assert parameter_name in list(self.parameters.keys())
@@ -38,13 +39,12 @@ class PID:
 
     error = x - self.desired_state
     self.integral += error
-    self.derivative = error - self.prev_error
+    self.derivative = (error - self.prev_error) / self.dt
     self.prev_error = error
 
-    pid = np.dot(self.P * error + self.I * self.integral + self.D * self.derivative, self.mask)
-    action = self.sigmoid(pid)
-    action = np.round(action).astype(np.int32)
-    
+    action = np.dot(self.P * error + self.I * self.integral + self.D * self.derivative, self.mask)
+    action = min(action, 10)
+    action = max(action, -10)
     return action
 
 
