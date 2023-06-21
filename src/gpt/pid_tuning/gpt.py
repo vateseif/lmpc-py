@@ -2,7 +2,7 @@ import os
 import ast
 import openai
 
-openai.api_key = open(os.path.dirname(__file__) + '/gpt4.key', 'r').readline().rstrip()
+openai.api_key = open(os.path.dirname(__file__) + '/gpt3.key', 'r').readline().rstrip()
 
 FUNCTIONS = [
       {
@@ -55,7 +55,7 @@ update('P', 0.5)
 Only you have access to the PID parameters, so when you change a prameter, it will remain as such until you change it again.
 """
 
-SYSTEM_PROMPT_SIMPLE = """
+SYSTEM_PROMPT_SIMPLE_PID = """
 We are trying to control an inverted pendulum using a PID controller and we want you to help us tune the PID parameters.
 Each time we run an episode of the simulation we will provide you feedback on the system behavior and you have to update the PID parameters based on your knowledge as a control engineer.
 We define the system to have satisfying behavior when the pole stays upright and does not go unstable.
@@ -81,20 +81,62 @@ Episode [EPISODE_NUM]: [FEEDBACK]
 Use the feedback and the provided api function `update` to update the PID controller. Explain your reasoning every time.
 """
 
+SYSTEM_PROMPT_SIMPLE_LQR = """
+We are trying to control an inverted pendulum using an LQR controller and we want you to help us tune the LQR parameters.
+Each time we run an episode of the simulation we will provide you feedback on the system behavior and you have to update the LQR parameters based on your knowledge as a control engineer.
+We define the system to have satisfying behavior when the pole stays upright and does not go unstable.
+The LQR parameters are that you can change are the gains for each state.
+
+The inverted pendulum states are: 
+- x: the position of the cart
+- dx: the velocity of the cart
+- theta: the angle of the pendulum on the cart. theta=0 indicates the pendulum is in the upright position.
+- dtheta: the angular velocity of the pendulum on the cart.
+
+The state gains are the parameters you have access to and they are initialized to the following values:
+- x = 0.0
+- dx = 0.0
+- theta = 0.0
+- dtheta = 0.0
+
+You have access to the the LQR gain parameters by using the following function:
+```
+update(parametername, parametervalue)
+```
+As an example, if the cartpole is oscillating too hard around the upright position you can increase the gain of x state as follows:
+```
+update('x', 1.0)
+```
+You can update only 1 parameter at a time so call the update function only once for each time.
+Only you have access to the LQR parameters, so when you change a prameter, it will remain as such until you change it again.
+Everytime an episode is run, we will provide feedback in the form:
+```
+Episode [EPISODE_NUM]: [FEEDBACK]
+```
+Use the feedback and the provided api function `update` to update the PID controller. Explain your reasoning every time.
+"""
+
 class GPTTuner:
-  def __init__(self, function_call):
+  def __init__(self, ctrl):
+
+    # prompt depends on type of controller
+    self.system_prompts = {
+      'pid': SYSTEM_PROMPT_SIMPLE_PID,
+      'lqr': SYSTEM_PROMPT_SIMPLE_LQR
+    }
+
     self.messages = [
-                {"role": "system", "content": SYSTEM_PROMPT_SIMPLE},
+                {"role": "system", "content": self.system_prompts[ctrl.name]},
             ]
     
-    self.functions = {"update": function_call}
+    self.functions = {"update": ctrl.update}
 
 
   def next_action(self, iteration=None, feedback_message=None):
     if feedback_message is not None:
       self.messages.append({"role": "user", "content": f'Episode {iteration}: {feedback_message}'})
     completion = openai.ChatCompletion.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         messages = self.messages,
         #functions=FUNCTIONS,
         #max_tokens=256,

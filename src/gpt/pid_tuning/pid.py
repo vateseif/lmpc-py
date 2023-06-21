@@ -1,7 +1,9 @@
 import numpy as np
 
 class PID:
-  def __init__(self, dim) -> None:
+  def __init__(self, dim=4) -> None:
+
+    self.name = 'pid'
   
     # number of states
     self.dim = dim

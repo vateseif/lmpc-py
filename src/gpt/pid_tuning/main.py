@@ -4,12 +4,14 @@ import gymnasium as gym
 from time import sleep
 
 from pid import PID
+from lqr import LQR
 from gpt import GPTTuner
 
 env = gym.make('CartPole-v1', render_mode='human')
 
-ctrl = PID(4)
-tuner = GPTTuner(function_call=ctrl.update)
+#ctrl = PID()
+ctrl = LQR()
+tuner = GPTTuner(ctrl)
 
 def run():
   while True:
@@ -38,8 +40,9 @@ while True:
   feedback_i += 1
   user_msg = input("How is the system behaving? \n")
   try:
-    tuner.apply_action(user_msg)
-    #tuner.next_action(feedback_i, user_msg)
+    #tuner.apply_action(user_msg)
+    tuner.next_action(feedback_i, user_msg)
   except:
     print("failed to apply action")
-  print(ctrl.P, ctrl.I, ctrl.D)
+  #print(ctrl.P, ctrl.I, ctrl.D)
+  print(ctrl.Q)
