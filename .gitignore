@@ -146,3 +146,5 @@ video/
 *.png
 
 deletable.*
+
+*.key
