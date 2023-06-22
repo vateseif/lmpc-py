@@ -136,7 +136,7 @@ class GPTTuner:
     if feedback_message is not None:
       self.messages.append({"role": "user", "content": f'Episode {iteration}: {feedback_message}'})
     completion = openai.ChatCompletion.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         messages = self.messages,
         #functions=FUNCTIONS,
         #max_tokens=256,
