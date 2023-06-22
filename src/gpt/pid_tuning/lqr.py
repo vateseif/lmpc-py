@@ -41,7 +41,7 @@ class LQR:
     # cost matrices
     #self.Q = np.diag([0.1, 1.0, 100.0, 5.])
     #self.R = np.array([[0.1]])
-    self.Q = np.diag([0.0, 0.0, 0.0, 0.0])
+    self.Q = np.diag([1.0, 1.0, 1.0, 1.0])
     self.R = np.array([[0.1]])
     # desired state
     self.desired_state = np.zeros((4,))
