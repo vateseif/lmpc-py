@@ -154,9 +154,6 @@ Update parameter:
 update('x', 0.4)
 ```
 By decreasing the gain related to the cart position (x), we expect the cart's movements to be smoother, which should help reduce any residual oscillations. Once we observe the results of this change, we can make further adjustments if needed. 
-[[ 0.4  0.   0.   0. ]
- [ 0.   0.5  0.   0. ]
- [ 0.   0.  20.   0. ]
- [ 0.   0.   0.  20. ]]
+
 
 
