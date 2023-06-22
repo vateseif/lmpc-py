@@ -94,10 +94,10 @@ The inverted pendulum states are:
 - dtheta: the angular velocity of the pendulum on the cart.
 
 The state gains are the parameters you have access to and they are initialized to the following values:
-- x = 0.0
-- dx = 0.0
-- theta = 0.0
-- dtheta = 0.0
+- x = 1.0
+- dx = 1.0
+- theta = 1.0
+- dtheta = 1.0
 
 You have access to the the LQR gain parameters by using the following function:
 ```
@@ -113,7 +113,7 @@ Everytime an episode is run, we will provide feedback in the form:
 ```
 Episode [EPISODE_NUM]: [FEEDBACK]
 ```
-Use the feedback and the provided api function `update` to update the PID controller. Explain your reasoning every time.
+Use the feedback and the provided api function `update` to update the LQR controller. Explain your reasoning every time.
 """
 
 class GPTTuner:
@@ -136,7 +136,7 @@ class GPTTuner:
     if feedback_message is not None:
       self.messages.append({"role": "user", "content": f'Episode {iteration}: {feedback_message}'})
     completion = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+        model="gpt-4",
         messages = self.messages,
         #functions=FUNCTIONS,
         #max_tokens=256,
