@@ -10,6 +10,14 @@ One reason for using human language to convey satisfaction about the performance
 If cost functions are human interpretable, why do we need a language model to update them? Well, cost functions are usually interpretable by a few humans, those who wrote them, and require some expert knowledge and rules of thumb on how a change in a cost function affects the systems behavior. Moreover, especially when working in realtime, we may want a system to behave in ways it was not predefined to. Having general knowledge on the system costs gives an interface on how to make it behave in this ways it was not hardcoded to.   
 
 # Example: Controlling an inverted pendulum
+
+### Before tuning
+![](video/lqr_not_tuned.gif)
+### After tuning
+![](video/lqr_tuned.gif)
+
+
+## User - GPT Discussion
 User:  The pendulum is not staying upright. The cart moves left and right to try and keep the pendulum stable but after few seconds the pendulum just falls
   
 GPT: It seems like the pendulum is not being controlled effectively, so I will increase the gain of the theta state to provide a stronger reaction to the pendulum's deviation from the upright position.
