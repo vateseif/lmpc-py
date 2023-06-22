@@ -5,9 +5,10 @@ I wanted to explore if GPT was able to use human feedback (in natural language) 
 
 I observe that LQR is more intuitive to tune to GPT. Not unreasonably, LQR was easier for me to tune as well. I speculate this to occur due to the fact that reasoning about penalizing the cost of a specicifc state is more intuitive than reasoning on the systems response with PID gains. 
 
-One reason for using human language to convey satisfaction about the performance of an optimization problem is that humans don't care about the optimal solution of "the" optimal solution, but rather, they care about the system behaving as the human wishes. The cost function in an optimization problem is simply the mathematical realization of the human's wishes. LQR is an optimization problem and as such it specifies a cost function that is devised and interpretable by humans. 
+One reason for using human language to convey satisfaction about the performance of an optimization problem is that humans don't care about "the" optimal solution, but rather, they care about the system behaving as the human wishes. The cost function in an optimization problem is simply the mathematical realization of the human's wishes. LQR is an optimization problem and as such it specifies a cost function that is devised and interpretable by humans. 
 
-If cost functions are human interpretable, why do we need a language model to update them? Well, cost functions are usually interpretable by a few humans, those who wrote them, and require some expert knowledge and rules of thumb on how a change in a cost function affects the systems behavior. Moreover, especially when working in realtime, we may want a system to behave in ways it was not predefined to. Having general knowledge on the system costs gives an interface on how to make it behave in this ways it was not hardcoded to.   
+If cost functions are human interpretable, why do we need a language model to update them? Well, cost functions are usually interpretable by a few humans, those who wrote them, and require some expert knowledge and rules of thumb on how to update. The control engineer could pre-prompt the language model with this knowledge and even examples. Moreover, especially when working in realtime, we may want a system to behave in ways it was not predefined to. 
+The language model becomes the interface between the user to the system and more specifically to the cost function of its controller; this should allow the system to behave in ways it was not hardcoded to.   
 
 # Example: Controlling an inverted pendulum
 
