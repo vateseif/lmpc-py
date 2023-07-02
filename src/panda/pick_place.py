@@ -34,6 +34,7 @@ class Sim:
     # reset controller
     robot.set_x0(self.x0)
     robot.set_xd(self.x0)
+    robot.open_gripper()
 
   def step(self, action: np.ndarray):
     observation, _, terminated, truncated, _ = self.env.step(action)
@@ -84,3 +85,6 @@ thread.daemon = True  # Set the thread as a daemon (will exit when the main prog
 thread.start()
 
 
+starts_msg = """
+Your goal is that of picking a cube on the table and moving it to its target position. The position of the cube is `x_cube` while the position you should move the cube to is `x_cube_target`.
+"""
