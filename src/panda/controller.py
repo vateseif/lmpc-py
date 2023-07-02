@@ -11,7 +11,7 @@ class Controller:
     self.lu = -1. # lower bound on u
     self.hu = 1.  # higher bound on u
     self.gripper = 1. # 1. means the gripper is open
-    self.tolerance = 0.001 # tolerance when gripper has cube under grasp
+    self.tolerance = 0.0005 # tolerance when gripper has cube under grasp
     
     # dynamics
     self.A = np.zeros((self.nx, self.nx))
@@ -59,11 +59,11 @@ class Controller:
   def add_constraint(self, constraint):
     self.constraints += constraint
 
-  def set_x0(self, x0: np.ndarray):
-    self.x0.value = x0
+  def set_x0(self, x0: np.ndarray, offset: np.ndarray = np.zeros(3)):
+    self.x0.value = x0 + offset
 
-  def set_xd(self, xd: np.ndarray):
-    self.xd.value = xd
+  def set_xd(self, xd: np.ndarray, offset: np.ndarray = np.zeros(3)):
+    self.xd.value = xd + offset
     
   def open_gripper(self):
     self.gripper = 1.

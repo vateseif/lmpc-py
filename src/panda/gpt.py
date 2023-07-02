@@ -1,5 +1,6 @@
 import os
 import openai
+import numpy as np
 
 from controller import Controller
 
@@ -54,22 +55,16 @@ class GPTAgent:
     print(f"\033[91m {message_string} \033[0m")
 
     robot_function = message_string.split("robot.")[1].split("(")[0]
-    function_argument = message_string.split(f"robot.{robot_function}(")[1].split(")")[0]
-
-    if len(function_argument)==0:
+    function_args = message_string.split(f"robot.{robot_function}(")[1].split(")")[0]
+    
+    if len(function_args)==0:
       self.robot.functions[robot_function]()
     else:
-      self.robot.functions[robot_function](self.sim.functions[function_argument]())
-    
-    '''
-    # parse arguments
-    parametername = message_string.split("update(")[1].split(",")[0]
-    parametervalue = float(message_string.split(f"update({parametername}, ")[1].split(")")[0])
-    parametername = parametername.replace("'", "").replace('"', '')
-    # apply function
-    self.functions['update'](parametername, parametervalue)
-    '''
-
-'''
-Your goal is that of picking a cube on the table and moving it to its target position. The position of the cube is `x_cube` while the position you should move the cube to is `x_cube_target`.
-'''
+      # arguments of function
+      xd_arg = function_args.split(",")[0]
+      offset_arg = function_args.split("[")[1].split("]")[0]
+      # retriev values from string arguments
+      xd = self.sim.functions[xd_arg]()
+      offset = np.fromstring(offset_arg,sep=',')
+      # apply
+      self.robot.functions[robot_function](xd, offset)
