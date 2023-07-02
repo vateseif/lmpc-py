@@ -10,6 +10,8 @@ class Controller:
     self.dt = 0.05
     self.lu = -1. # lower bound on u
     self.hu = 1.  # higher bound on u
+    self.gripper = 1. # 1. means the gripper is open
+    self.tolerance = 0.001 # tolerance when gripper has cube under grasp
     
     # dynamics
     self.A = np.zeros((self.nx, self.nx))
@@ -32,6 +34,14 @@ class Controller:
     self.constraints = self.init_constraints()
     self.prob = cp.Problem(self.obj, self.constraints)
 
+    # GPT functions
+    self.functions = {
+      "set_xd": self.set_xd,
+      "open_gripper" : self.open_gripper,
+      "close_gripper" : self.close_gripper,
+      "add_constraint" : self.add_constraint
+    }
+
 
   def init_constraints(self,):
     constraints = []
@@ -46,25 +56,24 @@ class Controller:
     
     return constraints
 
+  def add_constraint(self, constraint):
+    self.constraints += constraint
+
   def set_x0(self, x0: np.ndarray):
     self.x0.value = x0
 
   def set_xd(self, xd: np.ndarray):
     self.xd.value = xd
     
+  def open_gripper(self):
+    self.gripper = 1.
+
+  def close_gripper(self):
+    self.gripper = -1.
 
   def step(self):
+    if np.linalg.norm(self.xd.value - self.x0.value) < self.tolerance:
+      return np.zeros(3)
+    
     self.prob.solve(solver='MOSEK')
     return self.u.value[0]
-
-  
-
-
-#ctrl = Controller()
-#
-#ctrl.set_xd(np.ones(ctrl.nx))
-#
-#ctrl.step()
-#
-#print(ctrl.u.value)
-#print(ctrl.x.value)
