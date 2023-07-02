@@ -1,7 +1,5 @@
-import gymnasium as gym
 import panda_gym
-from time import sleep
-import numpy as np
+import gymnasium as gym
 from controller import Controller
 
 # params
