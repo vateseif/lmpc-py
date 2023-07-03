@@ -58,6 +58,7 @@ class Controller:
 
   def add_constraint(self, constraint):
     self.constraints += constraint
+    self.prob = cp.Problem(self.obj, self.constraints)
 
   def set_x0(self, x0: np.ndarray, offset: np.ndarray = np.zeros(3)):
     self.x0.value = x0 + offset
@@ -72,8 +73,8 @@ class Controller:
     self.gripper = -1.
 
   def step(self):
-    if np.linalg.norm(self.xd.value - self.x0.value) < self.tolerance:
-      return np.zeros(3)
+    #if np.linalg.norm(self.xd.value - self.x0.value) < self.tolerance:
+    #  return np.zeros(3)
     
     self.prob.solve(solver='MOSEK')
     return self.u.value[0]

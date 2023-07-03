@@ -22,9 +22,9 @@ class GPTAgent:
             ]
     
 
-  def next_action(self, feedback_message=None):
+  def next_action(self, feedback_message=None, role="user"):
     if feedback_message is not None:
-      self.messages.append({"role": "user", "content": feedback_message})
+      self.messages.append({"role": role, "content": feedback_message})
     completion = openai.ChatCompletion.create(
         model="gpt-4",
         messages = self.messages,
