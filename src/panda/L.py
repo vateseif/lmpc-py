@@ -1,3 +1,4 @@
+# NOTE: use conda activate safepanda for this env
 import gym
 import threading
 import panda_gym
@@ -32,8 +33,6 @@ class Sim:
     observation = self.env.reset()
     # store observation
     self.x0 = observation[0:3]
-    #self.x_cube = observation["achieved_goal"][0:3]
-    #self.x_cube_target = observation["desired_goal"][0:3]
     # reset controller
     robot.set_x0(self.x0)
     robot.set_xd(self.x0)
