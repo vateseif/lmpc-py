@@ -7,12 +7,12 @@ from time import process_time
 
 from Trainer import Trainer
 
-repeat_eval = 4   # how many times to repeat eval before averaging
-min_landmarks = 3
-max_landmarks = 26 # len of alphabet
+repeat_eval = 1   # how many times to repeat eval before averaging
+min_landmarks = 10
+max_landmarks = 10 # len of alphabet
 landmarks_range = list(range(min_landmarks, max_landmarks+1))
 
-s_types = ["VQ", "Gumbel", "Continuous"] # types of speaker to test
+s_types = ["VQ"]#, "Gumbel", "Continuous"] # types of speaker to test
 average_distances = {s:[] for s in s_types} # distances to target landmark during training
 std_distances = {s:[] for s in s_types} # standard dev of distances to target landmark
 compute_time = {s:[] for s in s_types}
@@ -22,7 +22,7 @@ if __name__ == "__main__":
     dist = []
     p_time = []
     for _ in range(repeat_eval):
-      trainer = Trainer(num_landmarks=n, s_type=s, save_results=False)
+      trainer = Trainer(num_landmarks=n, s_type=s, save_results=True, frozen_speaker=True, alpha=10)
       trainer.train()
       t0 = process_time()
       dist.append(trainer.evaluate()) # repeat eval 4 times

@@ -16,7 +16,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 class Trainer:
 
-  def __init__(self, num_agents=2, num_landmarks=3, lr=1e-2, alpha=10, s_type='VQ',
+  def __init__(self, num_agents=2, num_landmarks=3, lr=1e-2, alpha=10, VQ_decay=0.99, s_type='VQ',
               frozen_speaker=True, alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZ", save_results=False) -> None:
     assert s_type in speaker_types, f"{s_type} is not in {speaker_types}"
     # speaker type
@@ -38,6 +38,10 @@ class Trainer:
     self.listener_in = 2 + 2*num_landmarks + self.n_tokens + self.n_goal_id
     self.listener_out = 2
 
+    # speaker vocabulary
+    self.vocabulary_drift = 0
+    self.vocabulary = -1*np.ones(self.num_landmarks)
+
     # landamrk colors
     self.landmarks_c = sns.color_palette(cc.glasbey, n_colors=num_landmarks)
     self.landmarks_c = torch.tensor(self.landmarks_c).unsqueeze(1).to(device)
@@ -46,7 +50,7 @@ class Trainer:
     self.listener = Listener(self.listener_in, self.listener_out)
     if s_type == 'VQ':
       # VQ kwargs
-      vq_kwargs = {'dim':self.n_tokens, 'codebook_size':self.n_tokens, 'decay':1-1e-1, 'threshold_ema_dead_code':2}
+      vq_kwargs = {'dim':self.n_tokens, 'codebook_size':self.n_tokens, 'decay':VQ_decay, 'threshold_ema_dead_code':2}
       self.speaker = VQSpeaker(self.speaker_in, self.speaker_out, vq_kwargs, frozen=frozen_speaker)
     elif s_type == 'Gumbel':
       self.speaker = GumbelSpeaker(self.speaker_in, self.speaker_out)
@@ -115,6 +119,8 @@ class Trainer:
         it = (i * 100) // epochs        
         if self.save_results and self.s_type != "Continuous":
           self.save_speaker_vocabulary(it)
+        if self.s_type == "VQ":
+          self.update_vocabulary()
 
     # plot loss
     if self.save_results or show:
@@ -137,6 +143,18 @@ class Trainer:
     for i in range(self.num_landmarks):
       _, msg_ix, _ = speaker(self.landmarks_c[i])
       self.msgLandmarkMap[msg_ix.item()].append(i)
+
+  def update_vocabulary(self):
+    # get speaker in eval mode
+    speaker, _ = self.export_models()
+    vocabulary = np.zeros(self.num_landmarks)
+    for i in range(self.num_landmarks):
+        _, msg_ix, _ = speaker(self.landmarks_c[i])
+        vocabulary[i] = msg_ix
+        plt.text(i-0.06, 0.01, self.alphabet[msg_ix])
+
+    self.vocabulary_drift += np.sum(vocabulary!=self.vocabulary)
+    self.vocabulary = vocabulary
 
   def save_speaker_vocabulary(self, it):
     # get speaker in eval mode
