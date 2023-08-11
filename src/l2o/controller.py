@@ -1,6 +1,87 @@
 import torch
 import cvxpy as cp
 import numpy as np
+from core import AbstractController
+from config.config import BaseControllerConfig
+
+
+class BaseController(AbstractController):
+
+  def __init__(self, cfg=BaseControllerConfig()) -> None:
+    super().__init__(cfg)
+
+    self.gripper = 1. # 1 means the gripper is open
+    
+    self.init_dynamics()
+
+    self.init_problem()
+
+  def init_dynamics(self):
+    # dynamics
+    self.A = np.zeros((self.cfg.nx, self.cfg.nx))
+    self.B = np.eye(self.cfg.nx)
+    self.Ad = np.eye(self.cfg.nx) + self.A * self.cfg.dt
+    self.Bd = self.B * self.cfg.dt
+
+  def init_problem(self):
+    # variables
+    self.x = cp.Variable((self.cfg.T+1, self.cfg.nx), name='x')
+    self.u = cp.Variable((self.cfg.T, self.cfg.nu), name='u')
+    # parameters
+    self.x0 = cp.Parameter(self.cfg.nx, name="x0")
+    self.xd = cp.Parameter(self.cfg.nx, name="xd")
+    self.x0.value = np.zeros((self.cfg.nx,))
+    self.xd.value = np.zeros((self.cfg.nx,))
+    # cost
+    self.xd_cost_T = sum([cp.norm(xt - self.xd) for xt in self.x])
+    self.obj = cp.Minimize(self.xd_cost_T)
+    # constraints
+    self.cvx_constraints = self.init_cvx_constraints()
+
+    # put toghether nominal MPC problem
+    self.prob = cp.Problem(self.obj, self.cvx_constraints)
+
+  def init_cvx_constraints(self):
+    constraints = []
+    # upper and lower bounds
+    constraints += [self.u <= self.cfg.hu*np.ones((self.cfg.T, self.cfg.nu))]
+    constraints += [self.u >= self.cfg.lu*np.ones((self.cfg.T, self.cfg.nu))]
+    # initial cond
+    constraints += [self.x[0] == self.x0]
+    # dynamics
+    for t in range(self.cfg.T):
+      constraints += [self.x[t+1] == self.Ad @ self.x[t] + self.Bd @ self.u[t]]
+    # bouns on state (gripper always above table)
+    for t in range(self.cfg.T+1):
+      constraints += [self.x[t][2] >= 0]
+    return constraints
+
+  def open_gripper(self):
+    self.gripper = 1.
+
+  def close_gripper(self):
+    self.gripper = -1.
+
+  def reset(self, x0: np.ndarray) -> None:
+    self.x0.value = x0
+    self.xd.value = x0
+    self.open_gripper()
+    return
+
+  def _solve(self):
+    # solve for either uncostrained problem or for initial guess
+    self.prob.solve(solver='MOSEK')
+    return self.u.value[0]
+  
+  def step(self):
+    return self._solve()
+
+
+
+class ParametrizedRewardController(BaseController):
+
+  def apply_gpt_message(self, gpt_message:str):
+    self.xd.value = eval(gpt_message)
 
 class Controller:
   def __init__(self) -> None:
