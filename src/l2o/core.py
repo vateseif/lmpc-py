@@ -21,6 +21,7 @@ class AbstractControllerConfig:
 
 class AbstractRobotConfig:
   name: str
+  controller_type: str
 
 
 
@@ -59,7 +60,7 @@ class AbstractController(ObjBase):
     return
   
   @abstractmethod
-  def step(self, obs:np.ndarray) -> np.ndarray:
+  def step(self) -> np.ndarray:
     return
 
 
@@ -83,3 +84,17 @@ class AbstractRobot(ObjBase):
     self.TP: AbstractLLM          # Task planner
     self.OD: AbstractLLM          # Optimization Designer
     self.MPC: AbstractController  # Controller
+
+
+  @abstractmethod
+  def reset_gpt(self):
+    return
+  
+  def reset_controller(self, x0:np.ndarray):
+    self.MPC.reset(x0)
+    return
+    
+  def reset(self, x0:np.ndarray):
+    self.reset_gpt()
+    self.reset_controller(x0)
+    return
