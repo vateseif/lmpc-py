@@ -2,12 +2,15 @@ import os
 import inspect
 import numpy as np
 from abc import abstractmethod
-from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Union
+from langchain.chat_models import ChatOpenAI
+
+# GPT4 api key
+os.environ["OPENAI_API_KEY"] = open(os.path.dirname(__file__) + '/keys/gpt4.key', 'r').readline().rstrip()
 
 
 class AbstractLLMConfig:
   prompt: str
+  parsing: str
   model_name: str
   temperature: float
 
@@ -22,7 +25,6 @@ class AbstractControllerConfig:
 class AbstractRobotConfig:
   name: str
   controller_type: str
-
 
 
 class ObjBase:
@@ -50,7 +52,7 @@ class AbstractController(ObjBase):
 
   def __init__(self, cfg: AbstractControllerConfig) -> None:
     self.cfg = cfg
-
+    
   @abstractmethod
   def reset(self, x0:np.ndarray) -> None:
     return
@@ -68,6 +70,9 @@ class AbstractLLM(ObjBase):
 
   def __init__(self, cfg:AbstractLLMConfig) -> None:
     self.cfg = cfg
+    # init model
+    self.model = ChatOpenAI(model_name=self.cfg.model_name, temperature=self.cfg.temperature)
+
 
   @abstractmethod
   def run(self):
