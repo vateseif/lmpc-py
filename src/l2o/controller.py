@@ -1,6 +1,7 @@
 import torch
 import cvxpy as cp
 import numpy as np
+from typing import Tuple
 from core import AbstractController
 from config.config import BaseControllerConfig
 
@@ -63,9 +64,7 @@ class BaseController(AbstractController):
     self.gripper = -1.
 
   def reset(self, x0: np.ndarray) -> None:
-    self.x0.value = x0
-    self.xd.value = x0
-    self.open_gripper()
+    self.init_problem()
     return
 
   def _solve(self):
@@ -80,8 +79,27 @@ class BaseController(AbstractController):
 
 class ParametrizedRewardController(BaseController):
 
-  def apply_gpt_message(self, gpt_message:str):
+  def apply_gpt_message(self, gpt_message:str, x_cubes: Tuple[np.ndarray]):
+    cube_1, cube_2, cube_3, cube_4 = x_cubes
     self.xd.value = eval(gpt_message)
+
+
+class ObjectiveController(BaseController):
+
+  def apply_gpt_message(self, gpt_message: str, x_cubes: Tuple[np.ndarray]) -> None:
+    cube_1, cube_2, cube_3, cube_4 = x_cubes
+    obj = eval(gpt_message, {
+      "cp": cp,
+      "np": np,
+      "self": self,
+      "cube_1": cube_1,
+      "cube_2": cube_2,
+      "cube_3": cube_3,
+      "cube_4": cube_4
+    })
+    self.obj = cp.Minimize(obj)
+    self.prob = cp.Problem(self.obj, self.cvx_constraints)
+    return 
 
 class Controller:
   def __init__(self) -> None:
@@ -259,3 +277,9 @@ class Controller:
     self.x_bar = self.x.value
     return self.u.value[0]
 
+
+
+ControllerOptions = {
+  "parametrized": ParametrizedRewardController,
+  "objective": ObjectiveController
+}
