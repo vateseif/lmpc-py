@@ -20,8 +20,8 @@ class BaseRobot(AbstractRobot):
     self.MPC.x0.value = x0
     return
 
-  def create_plan(self):
-    plan = self.TP.run("")
+  def create_plan(self, user_task:str):
+    plan = self.TP.run(user_task)
     return plan.tasks # TODO: plan.tasks is hardcoded here
 
   def next_plan(self, plan:str, x_cubes: Tuple[np.ndarray]):

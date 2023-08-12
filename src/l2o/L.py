@@ -29,8 +29,11 @@ class Sim:
     self.x0 = observation[0:3]
     # reset controller
     self.robot.reset(self.x0)
-    self.plan = self.robot.create_plan()
+    # count number of tasks solved from a plan 
     self.task_counter = 0
+
+  def create_plan(self, user_task:str): 
+    self.plan = self.robot.create_plan(user_task)
 
   def step(self, action: np.ndarray):
     self.observation, _, done, _ = self.env.step(action)
@@ -80,5 +83,7 @@ if __name__ == "__main__":
   thread.daemon = True  # Set the thread as a daemon (will exit when the main program ends)
   thread.start()
 
+  #sim.create_plan("Stack all cubes on top of cube_2.")
+  #sim.next_task()
   #sim.next_plan("go to cube_1")
 
