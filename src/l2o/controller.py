@@ -65,6 +65,8 @@ class BaseController(AbstractController):
 
   def reset(self, x0: np.ndarray) -> None:
     self.init_problem()
+    self.x0.value = x0
+    self.xd.value = x0
     return
 
   def _solve(self):
