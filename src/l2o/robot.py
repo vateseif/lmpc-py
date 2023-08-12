@@ -1,9 +1,10 @@
 import numpy as np
 from typing import Tuple
+from llm import BaseLLM
 from core import AbstractRobot
-from config.config import BaseRobotConfig
+from config.config import BaseRobotConfig, BaseLLMConfigs
 from controller import BaseController, ControllerOptions
-from llm import TaskPlanner, OptimizationDesignerOptions, Optimization
+
 
 
 class BaseRobot(AbstractRobot):
@@ -11,8 +12,8 @@ class BaseRobot(AbstractRobot):
   def __init__(self, cfg=BaseRobotConfig()) -> None:
     self.cfg = cfg
 
-    self.TP = TaskPlanner()
-    self.OD = OptimizationDesignerOptions[self.cfg.od_type]()
+    self.TP = BaseLLM(BaseLLMConfigs["plan"]())
+    self.OD = BaseLLM(BaseLLMConfigs["objective"]())
     self.MPC: BaseController = ControllerOptions[self.cfg.controller_type]()
 
   def set_x0(self, x0: np.ndarray):
@@ -20,8 +21,8 @@ class BaseRobot(AbstractRobot):
     return
 
   def create_plan(self):
-    plan = self.TP.run()
-    return plan
+    plan = self.TP.run("")
+    return plan.tasks # TODO: plan.tasks is hardcoded here
 
   def next_plan(self, plan:str, x_cubes: Tuple[np.ndarray]):
     # if custom function is called apply that
@@ -32,11 +33,9 @@ class BaseRobot(AbstractRobot):
       self.MPC.close_gripper()
       return
     # 
-    optimization: Optimization = self.OD.run(plan)
-    #optimization = Optimization(objective="sum([cp.norm(self.x[t] - cube_1 + np.array([-0.06, 0, 0])) for t in range(self.cfg.T)])")
-    #optimization = Optimization(objective="cp.norm(self.x[-1] - cube_1 + np.array([-0.06, 0, 0]))") 
- 
-    self.MPC.apply_gpt_message(optimization.objective, x_cubes)
+    optimization = self.OD.run(plan)
+
+    self.MPC.apply_gpt_message(optimization.objective, x_cubes) # TODO: optimization.objective is hardcoded here
     return
 
 
