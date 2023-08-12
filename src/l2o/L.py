@@ -29,6 +29,8 @@ class Sim:
     self.x0 = observation[0:3]
     # reset controller
     self.robot.reset(self.x0)
+    self.plan = self.robot.create_plan()
+    self.task_counter = 0
 
   def step(self, action: np.ndarray):
     self.observation, _, done, _ = self.env.step(action)
@@ -44,9 +46,13 @@ class Sim:
   def get_x_cubes(self) -> Tuple[np.ndarray]:
     return (self.x_cube1, self.x_cube2, self.x_cube3, self.x_cube4)
 
-  def next_plan(self, plan:str):
+  def _solve_task(self, plan:str):
     self.robot.next_plan(plan, self.get_x_cubes())
     return
+
+  def next_task(self):
+    self._solve_task(self.plan[self.task_counter])
+    self.task_counter += 1
 
   def run(self):
     for _ in range(self.n_episodes):
