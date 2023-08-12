@@ -7,7 +7,7 @@ TASK_PLANNER_PROMPT = """
   This is the description of the scene:
     - The robot starts at the home location with the gripper open.
     - There are 4 different cubes that you can manipulate: cube_1, cube_2, cube_3, cube_4
-    - All cubes have the same side length of 0.06m
+    - All cubes have the same side length of 0.08m
     - If you want to pick a cube, always first move the gripper to a position above the cube. For example:
         If the task it to pick up an object
         ~~~
@@ -39,7 +39,7 @@ OPTIMIZATION_DESIGNER_PROMPT = """
     - The state variable self.x[t] represents the position of the gripper in position x, y, z at timestep t.
     - The whole MPC horizon has length self.cfg.T = 15
     - There are 4 cubes on the table.
-    - All cubes have side length of 0.1m.
+    - All cubes have side length of 0.08m.
     - At each timestep I will give you 1 task. You have to convert this task into an objective for the MPC.
 
   Here is example 1:
@@ -47,7 +47,7 @@ OPTIMIZATION_DESIGNER_PROMPT = """
   Task: 
       move the gripper behind cube_1
   Output:
-      sum([cp.norm(xt - (cube_1 + np.array([-0.1, 0, 0]) )) for xt in self.x]) # gripper is moved 1 side lenght behind cube_1
+      sum([cp.norm(xt - (cube_1 + np.array([-0.08, 0, 0]) )) for xt in self.x]) # gripper is moved 1 side lenght behind cube_1
   ~~~
 
   {format_instructions}
