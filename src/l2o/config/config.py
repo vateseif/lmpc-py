@@ -2,19 +2,19 @@ from core import AbstractControllerConfig, AbstractLLMConfig, AbstractRobotConfi
 from prompts.stack import TASK_PLANNER_PROMPT, OPTIMIZATION_DESIGNER_PROMPT 
 
 
-class PlanConfig(AbstractLLMConfig):
+class PlanLLMConfig(AbstractLLMConfig):
   prompt: str = TASK_PLANNER_PROMPT
   parsing: str = "plan"
   model_name: str = "gpt-4"
   temperature: float = 0.7
 
-class ObjectiveConfig(AbstractLLMConfig):
+class ObjectiveLLMConfig(AbstractLLMConfig):
   prompt: str = OPTIMIZATION_DESIGNER_PROMPT
   parsing: str = "objective"
   model_name: str = "gpt-4"
   temperature: float = 0.7
 
-class OptimizationConfig(AbstractLLMConfig):
+class OptimizationLLMConfig(AbstractLLMConfig):
   prompt: str = OPTIMIZATION_DESIGNER_PROMPT
   parsing: str = "optimization"
   model_name: str = "gpt-3.5-turbo"
@@ -36,7 +36,7 @@ class BaseRobotConfig(AbstractRobotConfig):
 
 
 BaseLLMConfigs = {
-  "plan": PlanConfig,
-  "objective": ObjectiveConfig,
-  "optimization": OptimizationConfig
+  "plan": PlanLLMConfig,
+  "objective": ObjectiveLLMConfig,
+  "optimization": OptimizationLLMConfig
 }
