@@ -3,6 +3,7 @@ import cvxpy as cp
 import numpy as np
 from typing import Tuple
 from core import AbstractController
+from llm import Objective, Optimization
 from config.config import BaseControllerConfig
 
 
@@ -11,7 +12,7 @@ class BaseController(AbstractController):
   def __init__(self, cfg=BaseControllerConfig()) -> None:
     super().__init__(cfg)
 
-    self.gripper = 1. # 1 means the gripper is open
+    
     
     self.init_dynamics()
 
@@ -57,21 +58,33 @@ class BaseController(AbstractController):
       constraints += [self.x[t][2] >= 0]
     return constraints
 
-  def open_gripper(self):
-    self.gripper = 1.
-
-  def close_gripper(self):
-    self.gripper = -1.
-
   def reset(self, x0: np.ndarray) -> None:
     self.init_problem()
     self.x0.value = x0
     self.xd.value = x0
     return
 
+  def _eval(self, code_str: str, x_cubes: Tuple[np.ndarray]):
+    #TODO this is hard coded for when there are 4 cubes
+    cube_1, cube_2, cube_3, cube_4 = x_cubes
+    evaluated_code = eval(code_str, {
+      "cp": cp,
+      "np": np,
+      "self": self,
+      "cube_1": cube_1,
+      "cube_2": cube_2,
+      "cube_3": cube_3,
+      "cube_4": cube_4
+    })
+
+    return evaluated_code
+
   def _solve(self):
     # solve for either uncostrained problem or for initial guess
     self.prob.solve(solver='MOSEK')
+    #if self.prob.status != 'optimal':  
+    #  return self.u_old[0]
+    #self.u_old = self.u.value[1:]
     return self.u.value[0]
   
   def step(self):
@@ -88,18 +101,25 @@ class ParametrizedRewardController(BaseController):
 
 class ObjectiveController(BaseController):
 
-  def apply_gpt_message(self, gpt_message: str, x_cubes: Tuple[np.ndarray]) -> None:
-    cube_1, cube_2, cube_3, cube_4 = x_cubes
-    obj = eval(gpt_message, {
-      "cp": cp,
-      "np": np,
-      "self": self,
-      "cube_1": cube_1,
-      "cube_2": cube_2,
-      "cube_3": cube_3,
-      "cube_4": cube_4
-    })
+  def apply_gpt_message(self, objective: Objective, x_cubes: Tuple[np.ndarray]) -> None:
+    # apply objective function
+    obj = self._eval(objective.objective, x_cubes)
     self.obj = cp.Minimize(obj)
+    # create new MPC problem
+    self.prob = cp.Problem(self.obj, self.cvx_constraints)
+    return 
+
+class OptimizationController(BaseController):
+
+  def apply_gpt_message(self, optimization: Optimization, x_cubes: Tuple[np.ndarray]) -> None:    
+    # apply objective function
+    obj = self._eval(optimization.objective, x_cubes)
+    self.obj = cp.Minimize(obj)
+    # apply constraints
+    constraints = self.cvx_constraints
+    for constraint in optimization.constraints:
+      constraints += self._eval(constraint, x_cubes)
+    # create new MPC problem
     self.prob = cp.Problem(self.obj, self.cvx_constraints)
     return 
 
@@ -283,5 +303,6 @@ class Controller:
 
 ControllerOptions = {
   "parametrized": ParametrizedRewardController,
-  "objective": ObjectiveController
+  "objective": ObjectiveController,
+  "optimization": OptimizationController
 }
