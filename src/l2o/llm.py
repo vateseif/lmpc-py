@@ -40,5 +40,5 @@ class BaseLLM(AbstractLLM):
     self.messages.append(HumanMessage(content=user_message))
     model_message = self.model(self.messages)
     self.messages.append(model_message)
-    print(f"\033[91m {model_message.content} \033[0m")
+    print(f"\33[92m {model_message.content} \033[0m \n")
     return self.parser.parse(model_message.content)
