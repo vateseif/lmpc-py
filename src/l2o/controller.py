@@ -11,11 +11,9 @@ class BaseController(AbstractController):
 
   def __init__(self, cfg=BaseControllerConfig()) -> None:
     super().__init__(cfg)
-
-    
-    
+    # init linear dynamics
     self.init_dynamics()
-
+    # init CVXPY problem
     self.init_problem()
 
   def init_dynamics(self):
@@ -39,7 +37,6 @@ class BaseController(AbstractController):
     self.obj = cp.Minimize(self.xd_cost_T)
     # constraints
     self.cvx_constraints = self.init_cvx_constraints()
-
     # put toghether nominal MPC problem
     self.prob = cp.Problem(self.obj, self.cvx_constraints)
 
@@ -76,15 +73,11 @@ class BaseController(AbstractController):
       "cube_3": cube_3,
       "cube_4": cube_4
     })
-
     return evaluated_code
 
   def _solve(self):
     # solve for either uncostrained problem or for initial guess
     self.prob.solve(solver='MOSEK')
-    #if self.prob.status != 'optimal':  
-    #  return self.u_old[0]
-    #self.u_old = self.u.value[1:]
     return self.u.value[0]
   
   def step(self):
