@@ -16,7 +16,7 @@ class Objective(BaseModel):
 
 class Optimization(BaseModel):
   objective: str = Field(description="objective function to be applied to MPC")
-  constraints: List[str] = Field(description="constraints to tbe applied to MPC written in cvxpy")
+  constraints: List[str] = Field(description="constraints to be applied to MPC")
 
 
 ParsingModel = {

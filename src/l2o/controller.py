@@ -1,10 +1,15 @@
 import torch
+import do_mpc
 import cvxpy as cp
 import numpy as np
-from typing import Tuple
+import casadi as ca
+from typing import Tuple, List, Optional
+
+from time import time
+
 from core import AbstractController
 from llm import Objective, Optimization
-from config.config import BaseControllerConfig
+from config.config import BaseControllerConfig, BaseNMPCConfig
 
 
 class BaseController(AbstractController):
@@ -55,9 +60,13 @@ class BaseController(AbstractController):
       constraints += [self.x[t][2] >= 0]
     return constraints
 
+  def set_x0(self, x0: np.ndarray):
+    self.x0.value = x0
+    return
+
   def reset(self, x0: np.ndarray) -> None:
     self.init_problem()
-    self.x0.value = x0
+    self.set_x0(x0)
     self.xd.value = x0
     return
 
@@ -294,8 +303,150 @@ class Controller:
 
 
 
+class BaseNMPC(AbstractController):
+  def __init__(self, cfg=BaseNMPCConfig()) -> None:
+    super().__init__(cfg)
+
+    # init linear dynamics
+    self.init_dynamics()
+    # init problem (cost and constraints)
+    #self.init_problem()
+    # init do_mpc problem
+    self.init_controller()
+
+  def init_dynamics(self):
+    # inti do_mpc model
+    self.model = do_mpc.model.Model(self.cfg.model_type) # TODO: add model_type to cfg
+    # position (x, y, z)
+    self.x = self.model.set_variable(var_type='_x', var_name='x', shape=(self.cfg.nx,1))
+    # velocity (dx, dy, dz)
+    self.dx = self.model.set_variable(var_type='_x', var_name='dx', shape=(self.cfg.nx,1))
+    # controls (u1, u2, u3)
+    self.u = self.model.set_variable(var_type='_u', var_name='u', shape=(self.cfg.nu,1))
+    # system dynamics
+    self.model.set_rhs('x', self.x + self.dx * self.cfg.dt)
+    self.model.set_rhs('dx', self.u)
+    # setup model
+    self.model.setup()
+    return
+
+  def set_objective(self, mterm: ca.SX = ca.DM([[0]])): # TODO: not sure if ca.SX is the right one
+    # objective terms
+    mterm = mterm
+    lterm = mterm #ca.DM([[0]]) #
+    # state objective
+    self.mpc.set_objective(mterm=mterm, lterm=lterm)
+    # input objective
+    self.mpc.set_rterm(u=0.)
+
+    return
+
+  def set_constraints(self, nlp_constraints: Optional[List[ca.SX]] = None):
+
+    # base constraints
+    self.mpc.bounds['upper','_u', 'u'] = self.cfg.hu * np.ones((self.cfg.nu, 1))  # input upper bound
+    self.mpc.bounds['lower','_u', 'u'] = self.cfg.lu * np.ones((self.cfg.nu, 1))  # input lower bound
+
+    if nlp_constraints == None: 
+      return
+
+    for i, constraint in enumerate(nlp_constraints):
+      self.mpc.set_nl_cons(f'const{i}', expr=constraint, ub=0., 
+                          soft_constraint=True, 
+                          penalty_term_cons=self.cfg.penalty_term_cons)
+
+    return
+
+  def init_mpc(self):
+    # init mpc model
+    self.mpc = do_mpc.controller.MPC(self.model)
+    # setup params
+    setup_mpc = {'n_horizon': self.cfg.T, 't_step': self.cfg.dt, 'store_full_solution': False}
+    # setup mpc
+    self.mpc.set_param(**setup_mpc)
+    self.mpc.settings.supress_ipopt_output() # => verbose = False
+    return
+
+  def init_controller(self):
+    # init
+    self.init_mpc()
+    # set functions
+    self.set_objective()
+    self.set_constraints()
+    # setup
+    self.mpc.setup()
+    self.mpc.set_initial_guess()
+    
+
+  def set_x0(self, x0: np.ndarray):
+    self.mpc.x0 = np.concatenate((x0, np.zeros(3))) # concatenate velocity      
+
+  def reset(self, x0: np.ndarray) -> None:
+    # TODO
+    #self.init_problem()
+    self.set_x0(x0)
+    #self.xd.value = x0
+    return  
+
+
+  def _eval(self, code_str: str, x_cubes: Tuple[np.ndarray]):
+    #TODO this is hard coded for when there are 4 cubes
+    cube_1, cube_2, cube_3, cube_4 = x_cubes
+    evaluated_code = eval(code_str, {
+      "ca": ca,
+      "cp": cp,
+      "np": np,
+      "self": self,
+      "cube_1": cube_1,
+      "cube_2": cube_2,
+      "cube_3": cube_3,
+      "cube_4": cube_4
+    })
+    return evaluated_code
+
+  def _solve(self):
+    # solve mpc at state x0
+    u0 = self.mpc.make_step(self.mpc.x0)
+    return u0.squeeze()
+
+  def step(self):
+    if not self.mpc.flags['setup']:
+      return np.zeros(self.cfg.nu)
+    return self._solve()
+
+  
+class ObjectiveNMPC(BaseNMPC):
+
+  def apply_gpt_message(self, objective: Objective, x_cubes: Tuple[np.ndarray]) -> None:
+    # init mpc newly
+    self.init_mpc()
+    # apply constraint function
+    self.set_objective(self._eval(objective.objective, x_cubes))
+    # set base constraint functions
+    self.set_constraints()
+    # setup
+    self.mpc.setup()
+    self.mpc.set_initial_guess()
+    return 
+
+class OptimizationNMPC(BaseNMPC):
+
+  def apply_gpt_message(self, optimization: Optimization, x_cubes: Tuple[np.ndarray]) -> None:
+    # init mpc newly
+    self.init_mpc()
+    # apply constraint function
+    self.set_objective(self._eval(optimization.objective, x_cubes))
+    # set base constraint functions
+    self.set_constraints([self._eval(c, x_cubes) for c in optimization.constraints])
+    # setup
+    self.mpc.setup()
+    self.mpc.set_initial_guess()
+    return 
+
 ControllerOptions = {
   "parametrized": ParametrizedRewardController,
   "objective": ObjectiveController,
-  "optimization": OptimizationController
+  "optimization": OptimizationController,
+  "nmpc_objective": ObjectiveNMPC,
+  "nmpc_optimization": OptimizationNMPC
 }
