@@ -13,18 +13,20 @@ class BaseRobot(AbstractRobot):
     self.cfg = cfg
 
     self.gripper = 1. # 1 means the gripper is open
+    self.gripper_timer = 0
     self.TP = BaseLLM(BaseLLMConfigs[self.cfg.tp_type]())
     self.OD = BaseLLM(BaseLLMConfigs[self.cfg.od_type]())
     self.MPC: BaseController = ControllerOptions[self.cfg.controller_type]()
 
   def open_gripper(self):
-    self.gripper = 1.
+    self.gripper = 0.
+    self.gripper_timer = 0
 
   def close_gripper(self):
     self.gripper = -1.
 
   def set_x0(self, x0: np.ndarray):
-    self.MPC.x0.value = x0
+    self.MPC.set_x0(x0)
     return
 
   def create_plan(self, user_task:str):
@@ -51,5 +53,9 @@ class BaseRobot(AbstractRobot):
 
 
   def step(self):
-    action = self.MPC.step() 
-    return np.hstack((action, self.gripper))
+    action = np.hstack((self.MPC.step(), self.gripper))  
+    if self.gripper==0 and self.gripper_timer>self.cfg.open_gripper_time: 
+      self.gripper = 1.
+    else:
+      self.gripper_timer += 1 
+    return action
