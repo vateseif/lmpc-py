@@ -5,6 +5,8 @@ import panda_gym
 import numpy as np
 from time import sleep
 from typing import Tuple
+
+from llm import Plan
 from robot import BaseRobot
 
 
@@ -29,7 +31,7 @@ class Sim:
     self.task_counter = 0
 
   def create_plan(self, user_task:str, solve=False): 
-    self.plan = self.robot.create_plan(user_task)
+    self.plan: Plan = self.robot.create_plan(user_task)
     if solve:
       for _ in self.plan:
         self.next_task()
