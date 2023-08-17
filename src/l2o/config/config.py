@@ -48,7 +48,7 @@ class BaseNMPCConfig(AbstractControllerConfig):
   lu: float = -0.2 # lower bound on u
   hu: float = 0.2  # higher bound on u
   model_type: str = "discrete"
-  penalty_term_cons: float = 1e10
+  penalty_term_cons: float = 1e7
   
 
 class BaseRobotConfig(AbstractRobotConfig):

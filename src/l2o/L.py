@@ -8,7 +8,7 @@ from typing import Tuple
 
 from llm import Plan, Optimization
 from robot import BaseRobot
-
+from mocks.mocks import mock_plan
 
 class Sim:
   def __init__(self) -> None:
@@ -31,9 +31,12 @@ class Sim:
     self.task_counter = 0
 
   def create_plan(self, user_task:str, solve=False): 
-    self.plan: Plan = self.robot.create_plan(user_task)
+    #self.plan: Plan = self.robot.create_plan(user_task)
+    self.plan: Plan = mock_plan
+    sleep(5)
+    print(f"\33[92m {self.plan.tasks} \033[0m \n")
     if solve:
-      for _ in self.plan:
+      for _ in self.plan.tasks:
         self.next_task()
         sleep(3)
 
@@ -57,7 +60,7 @@ class Sim:
     return
 
   def next_task(self):
-    self._solve_task(self.plan[self.task_counter])
+    self._solve_task(self.plan.tasks[self.task_counter])
     self.task_counter += 1
 
   def run(self):
@@ -90,14 +93,13 @@ if __name__ == "__main__":
   #sim.next_task()
   sleep(3)
 
-  optimization = Optimization(
-    objective= "ca.norm_2(x - cube_4)**2",
-    constraints= [
-      "0.045 - ca.norm_2(x - cube_1)", 
-      "0.045 - ca.norm_2(x - cube_2)", 
-      "0.045 - ca.norm_2(x - cube_3)", 
-      "0.045 - ca.norm_2(x - cube_4)"
-    ]
-  )
-
-  sim.robot.MPC.apply_gpt_message(optimization, sim.get_x_cubes())
+  #optimization = Optimization(
+  #  objective= "ca.norm_2(x - cube_1)**2",
+  #  constraints= [
+  #    "0.045 - ca.norm_2(x - cube_1)", 
+  #    "0.045 - ca.norm_2(x - cube_2)", 
+  #    "0.045 - ca.norm_2(x - cube_3)", 
+  #    "0.045 - ca.norm_2(x - cube_4)"
+  #  ]
+  #)
+  #sim.robot.MPC.apply_gpt_message(optimization, sim.get_x_cubes())

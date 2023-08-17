@@ -155,11 +155,11 @@ class BaseNMPC(AbstractController):
   def set_objective(self, mterm: ca.SX = ca.DM([[0]])): # TODO: not sure if ca.SX is the right one
     # objective terms
     mterm = mterm
-    lterm = mterm #ca.DM([[0]]) #
+    lterm = 0.2*mterm #ca.DM([[0]]) #
     # state objective
     self.mpc.set_objective(mterm=mterm, lterm=lterm)
     # input objective
-    self.mpc.set_rterm(u=1.)
+    self.mpc.set_rterm(u=3e-1)
 
     return
 
