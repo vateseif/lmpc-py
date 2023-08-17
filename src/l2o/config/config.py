@@ -29,7 +29,7 @@ class NMPCObjectiveLLMConfig(AbstractLLMConfig):
 class NMPCOptimizationLLMConfig(AbstractLLMConfig):
   prompt: str = NMPC_OPTIMIZATION_DESIGNER_PROMPT
   parsing: str = "optimization"
-  model_name: str = "gpt-3.5-turbo"
+  model_name: str = "gpt-4"
   temperature: float = 0.7
 
 class BaseControllerConfig(AbstractControllerConfig):
@@ -45,10 +45,10 @@ class BaseNMPCConfig(AbstractControllerConfig):
   nu: int = 3 
   T: int = 10
   dt: float = 0.05
-  lu: float = -0.5 # lower bound on u
-  hu: float = 0.5  # higher bound on u
+  lu: float = -0.2 # lower bound on u
+  hu: float = 0.2  # higher bound on u
   model_type: str = "discrete"
-  penalty_term_cons: float = 1e7
+  penalty_term_cons: float = 1e10
   
 
 class BaseRobotConfig(AbstractRobotConfig):

@@ -213,7 +213,7 @@ class BaseNMPC(AbstractController):
 
   def _eval(self, code_str: str, x_cubes: Tuple[np.ndarray], x_offset=0):
     #TODO this is hard coded for when there are 4 cubes
-    if x_offset!=0: x_offset+=0.01
+    #if x_offset!=0: x_offset+=0.01
     cube_1, cube_2, cube_3, cube_4 = x_cubes
     evaluated_code = eval(code_str, {
       "ca": ca,
@@ -260,7 +260,9 @@ class OptimizationNMPC(BaseNMPC):
     # apply constraint function
     self.set_objective(self._eval(optimization.objective, x_cubes))
     # set base constraint functions
-    self.set_constraints([self._eval(c, x_cubes, x_offset=(i%2 - 0.5)*0.096) for i, c in enumerate(2*optimization.constraints)])
+    n_const = len(optimization.constraints)
+    fingers = [-0.048, 0.048]
+    self.set_constraints([self._eval(c, x_cubes, x_offset=fingers[int(i<n_const)]) for i, c in enumerate(2*optimization.constraints)])
     # setup
     self.mpc.setup()
     self.mpc.set_initial_guess()

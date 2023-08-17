@@ -90,10 +90,17 @@ if __name__ == "__main__":
   #sim.next_task()
   sleep(3)
 
+  #sim.robot.MPC.apply_gpt_message(
+  #  Optimization(objective="ca.norm_2(x - cube_4)**2",
+  #               constraints= [
+  #                "0.04 - ca.norm_2(x - cube_2)", 
+  #                "0.1 - ca.norm_2(x - cube_3)", 
+  #                "0.03 - ca.norm_2(x - cube_4)"
+  #              ]), sim.get_x_cubes())
+
   sim.robot.MPC.apply_gpt_message(
     Optimization(objective="ca.norm_2(x - cube_4)**2",
                  constraints= [
-                  "0.04 - ca.norm_2(x - cube_2)", 
-                  "0.1 - ca.norm_2(x - cube_3)", 
-                  "0.03 - ca.norm_2(x - cube_4)"
+                  "0.042 - ca.norm_2(x - cube_4)",
+                  "0.042 - ca.norm_2(x - cube_3)",
                 ]), sim.get_x_cubes())
