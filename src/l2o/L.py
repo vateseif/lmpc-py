@@ -5,6 +5,8 @@ import panda_gym
 import numpy as np
 from time import sleep
 from typing import Tuple
+
+from llm import Plan, Optimization
 from robot import BaseRobot
 
 
@@ -29,7 +31,7 @@ class Sim:
     self.task_counter = 0
 
   def create_plan(self, user_task:str, solve=False): 
-    self.plan = self.robot.create_plan(user_task)
+    self.plan: Plan = self.robot.create_plan(user_task)
     if solve:
       for _ in self.plan:
         self.next_task()
@@ -86,3 +88,12 @@ if __name__ == "__main__":
 
   #sim.create_plan("Stack all cubes on top of cube_2.")
   #sim.next_task()
+  sleep(3)
+
+  sim.robot.MPC.apply_gpt_message(
+    Optimization(objective="ca.norm_2(x - cube_4)**2",
+                 constraints= [
+                  "0.04 - ca.norm_2(x - cube_2)", 
+                  "0.1 - ca.norm_2(x - cube_3)", 
+                  "0.07 - ca.norm_2(x - cube_4)"
+                ]), sim.get_x_cubes())

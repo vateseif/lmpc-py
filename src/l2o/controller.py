@@ -337,7 +337,7 @@ class BaseNMPC(AbstractController):
     # state objective
     self.mpc.set_objective(mterm=mterm, lterm=lterm)
     # input objective
-    self.mpc.set_rterm(u=0.)
+    self.mpc.set_rterm(u=1.)
 
     return
 
@@ -352,7 +352,7 @@ class BaseNMPC(AbstractController):
 
     for i, constraint in enumerate(nlp_constraints):
       self.mpc.set_nl_cons(f'const{i}', expr=constraint, ub=0., 
-                          soft_constraint=True, 
+                          soft_constraint=False, 
                           penalty_term_cons=self.cfg.penalty_term_cons)
 
     return
@@ -389,14 +389,15 @@ class BaseNMPC(AbstractController):
     return  
 
 
-  def _eval(self, code_str: str, x_cubes: Tuple[np.ndarray]):
+  def _eval(self, code_str: str, x_cubes: Tuple[np.ndarray], x_offset=0):
     #TODO this is hard coded for when there are 4 cubes
+    if x_offset!=0: x_offset+=0.01
     cube_1, cube_2, cube_3, cube_4 = x_cubes
     evaluated_code = eval(code_str, {
       "ca": ca,
       "cp": cp,
       "np": np,
-      "self": self,
+      "x": self.x + np.array([x_offset, 0., 0.]),
       "cube_1": cube_1,
       "cube_2": cube_2,
       "cube_3": cube_3,
@@ -437,7 +438,7 @@ class OptimizationNMPC(BaseNMPC):
     # apply constraint function
     self.set_objective(self._eval(optimization.objective, x_cubes))
     # set base constraint functions
-    self.set_constraints([self._eval(c, x_cubes) for c in optimization.constraints])
+    self.set_constraints([self._eval(c, x_cubes, x_offset=(i%2 - 0.5)*0.11) for i, c in enumerate(2*optimization.constraints)])
     # setup
     self.mpc.setup()
     self.mpc.set_initial_guess()
