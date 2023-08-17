@@ -6,7 +6,11 @@ import numpy as np
 from time import sleep
 from typing import Tuple
 
+<<<<<<< HEAD
 from llm import Plan, Optimization
+=======
+from llm import Plan
+>>>>>>> 6664650d36ec5311b0be05dacacf87c2cdce944b
 from robot import BaseRobot
 
 
