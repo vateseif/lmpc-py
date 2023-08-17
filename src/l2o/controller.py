@@ -397,7 +397,7 @@ class BaseNMPC(AbstractController):
       "ca": ca,
       "cp": cp,
       "np": np,
-      "x": self.x + np.array([x_offset, 0., 0.]),
+      "x": self.x + np.array([0., x_offset, 0.]),
       "cube_1": cube_1,
       "cube_2": cube_2,
       "cube_3": cube_3,
@@ -438,7 +438,7 @@ class OptimizationNMPC(BaseNMPC):
     # apply constraint function
     self.set_objective(self._eval(optimization.objective, x_cubes))
     # set base constraint functions
-    self.set_constraints([self._eval(c, x_cubes, x_offset=(i%2 - 0.5)*0.11) for i, c in enumerate(2*optimization.constraints)])
+    self.set_constraints([self._eval(c, x_cubes, x_offset=(i%2 - 0.5)*0.096) for i, c in enumerate(2*optimization.constraints)])
     # setup
     self.mpc.setup()
     self.mpc.set_initial_guess()

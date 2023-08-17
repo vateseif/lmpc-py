@@ -95,5 +95,5 @@ if __name__ == "__main__":
                  constraints= [
                   "0.04 - ca.norm_2(x - cube_2)", 
                   "0.1 - ca.norm_2(x - cube_3)", 
-                  "0.07 - ca.norm_2(x - cube_4)"
+                  "0.03 - ca.norm_2(x - cube_4)"
                 ]), sim.get_x_cubes())
