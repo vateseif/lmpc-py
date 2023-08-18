@@ -1,10 +1,16 @@
 from llm import Plan
 
 mock_plan = Plan(tasks=[
-  "go above cube_1",
-  "go to cube_1",
+  "move the gripper to cube_4 and avoid any collision with every cube",
   "close gripper",
-  "go above cube_2 without colliding with it",
+  "move the gripper 0.1m on top of cube_2 and avoid colliding with cube_2, cube_3 and cube_1",
   "open gripper",
-  "go -0.2m of the y axis of "
+  "move gripper to cube_3 and avoid collisions with every cube",
+  "close gripper",
+  "move gripper 0.1m on top of cube_4 and avoid collisions with every cube apart from cube_3",
+  "open gripper",
+  "move gripper to cube_1 and avoid collisions with every cube",
+  "close gripper",
+  "move gripper 0.1m above cube_3 and avoid collisions with every cube apart from cube_1",
+  "open gripper"
 ])

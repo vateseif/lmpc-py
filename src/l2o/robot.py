@@ -31,7 +31,7 @@ class BaseRobot(AbstractRobot):
 
   def create_plan(self, user_task:str):
     plan = self.TP.run(user_task)
-    return plan.tasks # TODO: plan.tasks is hardcoded here
+    return plan # TODO: plan.tasks is hardcoded here
 
   def next_plan(self, plan:str, x_cubes: Tuple[np.ndarray]):
     # print plan

@@ -155,17 +155,19 @@ class BaseNMPC(AbstractController):
   def set_objective(self, mterm: ca.SX = ca.DM([[0]])): # TODO: not sure if ca.SX is the right one
     # objective terms
     mterm = mterm
-    lterm = mterm #ca.DM([[0]]) #
+    lterm = 0.4*mterm #ca.DM([[0]]) #
     # state objective
     self.mpc.set_objective(mterm=mterm, lterm=lterm)
     # input objective
-    self.mpc.set_rterm(u=1.)
+    self.mpc.set_rterm(u=2)
 
     return
 
   def set_constraints(self, nlp_constraints: Optional[List[ca.SX]] = None):
 
-    # base constraints
+    # base constraints (state)
+    self.mpc.bounds['lower','_x', 'x'] = np.array([-100, -100, 0.0]) # stay above table
+    # base constraints (input)
     self.mpc.bounds['upper','_u', 'u'] = self.cfg.hu * np.ones((self.cfg.nu, 1))  # input upper bound
     self.mpc.bounds['lower','_u', 'u'] = self.cfg.lu * np.ones((self.cfg.nu, 1))  # input lower bound
 
@@ -174,7 +176,7 @@ class BaseNMPC(AbstractController):
 
     for i, constraint in enumerate(nlp_constraints):
       self.mpc.set_nl_cons(f'const{i}', expr=constraint, ub=0., 
-                          soft_constraint=False, 
+                          soft_constraint=True, 
                           penalty_term_cons=self.cfg.penalty_term_cons)
 
     return
