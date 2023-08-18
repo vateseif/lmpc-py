@@ -93,13 +93,41 @@ if __name__ == "__main__":
   #sim.next_task()
   sleep(3)
 
-  #optimization = Optimization(
-  #  objective= "ca.norm_2(x - cube_1)**2",
-  #  constraints= [
-  #    "0.045 - ca.norm_2(x - cube_1)", 
-  #    "0.045 - ca.norm_2(x - cube_2)", 
-  #    "0.045 - ca.norm_2(x - cube_3)", 
-  #    "0.045 - ca.norm_2(x - cube_4)"
-  #  ]
-  #)
-  #sim.robot.MPC.apply_gpt_message(optimization, sim.get_x_cubes())
+  """
+  optimization = Optimization(
+    objective= "ca.norm_2(x - cube_4)**2",
+    constraints= [
+      "0.046 - ca.norm_2(x - cube_1)", 
+      "0.046 - ca.norm_2(x - cube_2)", 
+      "0.046 - ca.norm_2(x - cube_3)", 
+      "0.046 - ca.norm_2(x - cube_4)"
+    ]
+  )
+  sim.robot.MPC.apply_gpt_message(optimization, sim.get_x_cubes())
+
+  sleep(10)
+
+  optimization = Optimization(
+    objective= "ca.norm_2(x - cube_1)**2",
+    constraints= [
+      "0.046 - ca.norm_2(x - cube_1)", 
+      "0.046 - ca.norm_2(x - cube_2)", 
+      "0.046 - ca.norm_2(x - cube_3)",
+      "0.046 - ca.norm_2(x - cube_4)"
+    ]
+  )
+  sim.robot.MPC.apply_gpt_message(optimization, sim.get_x_cubes())
+
+  sleep(20)
+#
+  optimization = Optimization(
+    objective= "ca.norm_2(x - cube_4)**2",
+    constraints= [
+      "0.046 - ca.norm_2(x - cube_1)", 
+      "0.046 - ca.norm_2(x - cube_2)", 
+      "0.046 - ca.norm_2(x - cube_3)", 
+      "0.046 - ca.norm_2(x - cube_4)"
+    ]
+  )
+  sim.robot.MPC.apply_gpt_message(optimization, sim.get_x_cubes())
+  """

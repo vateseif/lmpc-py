@@ -121,7 +121,7 @@ NMPC_OPTIMIZATION_DESIGNER_PROMPT = """
     - The MPC controller is used to generate a the trajectory of the gripper.
     - Casadi is used to program the MPC and the state variable is called x representing the gripper coordinates in 3D.
     - There are 4 cubes on the table.
-    - All cubes have side length of 0.045m.
+    - All cubes have side length of 0.0465m.
     - You do not have to add constraints, but if you do they must be inequality constraints.
     - Write every inequality constraint such that it is satisfied if it is <= 0.
     
