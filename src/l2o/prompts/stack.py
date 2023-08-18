@@ -95,9 +95,9 @@ NMPC_OBJECTIVE_DESIGNER_PROMPT = """
   This is the scene description:
     - The robot manipulator sits on a table and its gripper starts at a home position.
     - The MPC controller is used to generate a the trajectory of the gripper.
-    - Casadi is used to program the MPC and the state variable is called self.x
+    - Casadi is used to program the MPC and the state variable is called x
     - There are 4 cubes on the table.
-    - All cubes have side length of 0.04m.
+    - All cubes have side length of 0.0468m.
     - At each timestep I will give you 1 task. You have to convert this task into an objective for the MPC.
 
   Here is example 1:
@@ -105,7 +105,7 @@ NMPC_OBJECTIVE_DESIGNER_PROMPT = """
   Task: 
       move the gripper behind cube_1
   Output:
-      objective = "ca.norm_2(self.x - (cube_1 + np.array([-0.08, 0, 0])))**2" # gripper is moved 2 times the side lenght behind cube_1
+      objective = "ca.norm_2(x - (cube_1 + np.array([-0.0468, 0, 0])))**2" 
   ~~~
 
   {format_instructions}
@@ -121,7 +121,7 @@ NMPC_OPTIMIZATION_DESIGNER_PROMPT = """
     - The MPC controller is used to generate a the trajectory of the gripper.
     - Casadi is used to program the MPC and the state variable is called x representing the gripper coordinates in 3D.
     - There are 4 cubes on the table.
-    - All cubes have side length of 0.0465m.
+    - All cubes have side length of 0.0468m.
     - You do not have to add constraints, but if you do they must be inequality constraints.
     - Write every inequality constraint such that it is satisfied if it is <= 0.
     
@@ -129,9 +129,9 @@ NMPC_OPTIMIZATION_DESIGNER_PROMPT = """
   Here is example 1:
   ~~~
   Task: 
-      "move the gripper 0.1m behind cube_1 and keep gripper at a height higher than 0.1m"
+      "move the gripper 0.0465m behind cube_1 and keep gripper at a height higher than 0.1m"
   Output:
-      objective = "ca.norm_2(x - (cube_1 + np.array([-0.1, 0, 0])))**2"
+      objective = "ca.norm_2(x - (cube_1 + np.array([-0.0468, 0, 0])))**2"
       constraints = ["0.1 - ca.norm_2(x[2])"]
   ~~~
 
