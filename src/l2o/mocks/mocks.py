@@ -1,16 +1,39 @@
 from llm import Plan
 
-mock_plan = Plan(tasks=[
+optimization_mock_plan = Plan(tasks=[
   "move the gripper to cube_4 and avoid any collision with every cube",
   "close gripper",
-  "move the gripper 0.1m on top of cube_2 and avoid colliding with cube_2, cube_3 and cube_1",
+  "move the gripper above cube_2 and avoid colliding with cube_2, cube_3 and cube_1",
   "open gripper",
   "move gripper to cube_3 and avoid collisions with every cube",
   "close gripper",
-  "move gripper 0.1m on top of cube_4 and avoid collisions with every cube apart from cube_3",
+  "move gripper above of cube_4 and avoid collisions with every cube apart from cube_3",
   "open gripper",
   "move gripper to cube_1 and avoid collisions with every cube",
   "close gripper",
-  "move gripper 0.1m above cube_3 and avoid collisions with every cube apart from cube_1",
+  "move gripper above cube_3 and avoid collisions with every cube apart from cube_1",
   "open gripper"
 ])
+
+objective_mock_plan = Plan(tasks=[
+  "move the gripper above cube_4",
+  "move gripper to the position of cube_4",
+  "close gripper",
+  "move the gripper above cube_2 and avoid collisions with every cube",
+  "open gripper",
+  "move gripper above cube_3 and avoid collisions with every cube",
+  "move gripper to the position of cube_3",
+  "close gripper",
+  "move the gripper above cube_4 and avoid collisions with every cube",
+  "open gripper",
+  "move gripper to above cube_1 and avoid collisions with every cube",
+  "move gripper to the position of cube_1",
+  "close gripper",
+  "move gripper above cube_3 and avoid collisions with every cube apart from cube_1",
+  "open gripper"
+])
+
+nmpcMockOptions = {
+  "nmpc_objective": objective_mock_plan,
+  "nmpc_optimization": optimization_mock_plan,
+}

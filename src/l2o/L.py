@@ -6,9 +6,9 @@ import numpy as np
 from time import sleep
 from typing import Tuple
 
-from llm import Plan, Optimization
+from llm import Plan
 from robot import BaseRobot
-from mocks.mocks import mock_plan
+from mocks.mocks import nmpcMockOptions
 
 class Sim:
   def __init__(self) -> None:
@@ -32,7 +32,7 @@ class Sim:
 
   def create_plan(self, user_task:str, solve=False): 
     #self.plan: Plan = self.robot.create_plan(user_task)
-    self.plan: Plan = mock_plan
+    self.plan: Plan = nmpcMockOptions[self.robot.cfg.controller_type]
     sleep(5)
     print(f"\33[92m {self.plan.tasks} \033[0m \n")
     if solve:

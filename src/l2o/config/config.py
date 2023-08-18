@@ -23,7 +23,7 @@ class OptimizationLLMConfig(AbstractLLMConfig):
 class NMPCObjectiveLLMConfig(AbstractLLMConfig):
   prompt: str = NMPC_OBJECTIVE_DESIGNER_PROMPT
   parsing: str = "objective"
-  model_name: str = "gpt-3.5-turbo"
+  model_name: str = "gpt-4"
   temperature: float = 0.7
 
 class NMPCOptimizationLLMConfig(AbstractLLMConfig):
