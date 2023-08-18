@@ -3,30 +3,22 @@ import gym
 import threading
 import panda_gym
 import numpy as np
-#import gymnasium as gym
-#from gpt import GPTAgent
-from controller import Controller
-
 from time import sleep
+from typing import Tuple
 
+from llm import Plan, Optimization
+from robot import BaseRobot
+from mocks.mocks import mock_plan
 
 class Sim:
   def __init__(self) -> None:
     # params
     self.n_episodes = 100
-    self.max_episode_length = 100000
-
+    # robot
+    self.robot = BaseRobot()
     # env
     self.env = gym.make("PandaBuildL-v2", render=True)
     self.observation = self.env.reset()
-
-
-    self.functions = {
-      'x_cube1': self._x_cube1,
-      'x_cube2': self._x_cube2,
-      'x_cube3': self._x_cube3,
-      'x_cube4': self._x_cube4,
-    }
 
   def reset(self):
     # reset pand env
@@ -34,9 +26,20 @@ class Sim:
     # store observation
     self.x0 = observation[0:3]
     # reset controller
-    robot.set_x0(self.x0)
-    robot.set_xd(self.x0)
-    robot.open_gripper()
+    self.robot.reset(self.x0)
+    # count number of tasks solved from a plan 
+    self.task_counter = 0
+
+  def create_plan(self, user_task:str, solve=False): 
+    #self.plan: Plan = self.robot.create_plan(user_task)
+    self.plan: Plan = mock_plan
+    sleep(5)
+    print(f"\33[92m {self.plan.tasks} \033[0m \n")
+    if solve:
+      for _ in self.plan.tasks:
+        self.next_task()
+        sleep(3)
+
 
   def step(self, action: np.ndarray):
     self.observation, _, done, _ = self.env.step(action)
@@ -49,30 +52,25 @@ class Sim:
     self.x_cube4 = self.observation[-24:-21]
     return done
 
-  def _x0(self):
-    return self.x0
+  def get_x_cubes(self) -> Tuple[np.ndarray]:
+    return (self.x_cube1, self.x_cube2, self.x_cube3, self.x_cube4)
 
-  def _x_cube1(self):
-    return self.x_cube1
+  def _solve_task(self, plan:str):
+    self.robot.next_plan(plan, self.get_x_cubes())
+    return
 
-  def _x_cube2(self):
-    return self.x_cube2
-  
-  def _x_cube3(self):
-    return self.x_cube3
+  def next_task(self):
+    self._solve_task(self.plan.tasks[self.task_counter])
+    self.task_counter += 1
 
-  def _x_cube4(self):
-    return self.x_cube4
-  
   def run(self):
     for _ in range(self.n_episodes):
       self.reset()
       while True:
         # update controller
-        robot.set_x0(self.x0)
+        self.robot.set_x0(self.x0)
         # compute action
-        action = robot.step()
-        action = np.hstack((action, robot.gripper))
+        action = self.robot.step()
         # step env
         done = self.step(action)
         
@@ -82,47 +80,54 @@ class Sim:
 
     self.env.close()
 
+if __name__ == "__main__":
 
-# controller
-robot = Controller()
-# simulator
-sim = Sim()  
+  # simulator
+  sim = Sim()
 
-# agent
-#agent = GPTAgent(robot, sim)
+  thread = threading.Thread(target=sim.run)
+  thread.daemon = True  # Set the thread as a daemon (will exit when the main program ends)
+  thread.start()
 
-thread = threading.Thread(target=sim.run)
-thread.daemon = True  # Set the thread as a daemon (will exit when the main program ends)
-thread.start()
+  #sim.create_plan("Stack all cubes on top of cube_2.")
+  #sim.next_task()
+  sleep(3)
 
+  """
+  optimization = Optimization(
+    objective= "ca.norm_2(x - cube_4)**2",
+    constraints= [
+      "0.046 - ca.norm_2(x - cube_1)", 
+      "0.046 - ca.norm_2(x - cube_2)", 
+      "0.046 - ca.norm_2(x - cube_3)", 
+      "0.046 - ca.norm_2(x - cube_4)"
+    ]
+  )
+  sim.robot.MPC.apply_gpt_message(optimization, sim.get_x_cubes())
 
-starts_msg = """
-There are 4 cubes on the table and their position is defined as `x_cube1`, `x_cube2`, `x_cube3` and `x_cube4`. 
-The cubes have size 0.04m, keep this into account to avoid collisions. When you grab a cube you can add constraints with some buffer distance to avoid hitting the other cubes.
-Always raise the end effector when grabbing a cube to avoid collisions while moving it.
+  sleep(10)
 
-You must relocate the cubes such that their arrangement forms the letter 'L'. You have to figure out where to place the cubes to achieve this.
-For example you can keep `cube_1` at its position and move the other cubes arund it to achieve the letter `L`.
-"""
+  optimization = Optimization(
+    objective= "ca.norm_2(x - cube_1)**2",
+    constraints= [
+      "0.046 - ca.norm_2(x - cube_1)", 
+      "0.046 - ca.norm_2(x - cube_2)", 
+      "0.046 - ca.norm_2(x - cube_3)",
+      "0.046 - ca.norm_2(x - cube_4)"
+    ]
+  )
+  sim.robot.MPC.apply_gpt_message(optimization, sim.get_x_cubes())
 
-#agent.next_action(starts_msg, role="system")
-"""
-robot.set_xd(sim._x_cube2(), [0,0,0.05])
-robot.set_xd(sim._x_cube2(), [0,0,0.0])
-robot.close_gripper()
-
-robot.set_xd(sim._x_cube3(), [0,0,0.1])
-robot.set_xd(sim._x_cube3(), [0,0,0.05])
-robot.open_gripper()
-
-robot.set_xd(sim._x_cube3(), [0,0,0.15])
-robot.set_xd(sim._x_cube4(), [0,0,0.15])
-robot.set_xd(sim._x_cube4(), [0,0,0.0])
-robot.close_gripper()
-
-robot.set_xd(sim._x_cube2(), [0,0,0.1])
-robot.set_xd(sim._x_cube2(), [0,0,0.05])
-robot.open_gripper()
-
-
-"""
+  sleep(20)
+#
+  optimization = Optimization(
+    objective= "ca.norm_2(x - cube_4)**2",
+    constraints= [
+      "0.046 - ca.norm_2(x - cube_1)", 
+      "0.046 - ca.norm_2(x - cube_2)", 
+      "0.046 - ca.norm_2(x - cube_3)", 
+      "0.046 - ca.norm_2(x - cube_4)"
+    ]
+  )
+  sim.robot.MPC.apply_gpt_message(optimization, sim.get_x_cubes())
+  """
