@@ -15,6 +15,17 @@ optimization_mock_plan = Plan(tasks=[
   "open gripper"
 ])
 
+optimization_mock_plan = Plan(tasks=[
+  "move the gripper to cube_4 and avoid any collision with every cube",
+  "close gripper",
+  "move the gripper next to cube_3 and avoid colliding with cube_2, cube_3 and cube_1",
+  "open gripper",
+  "move gripper to cube_2 and avoid collisions with every cube",
+  "close gripper",
+  "move gripper at a height above cube_3 and cube_4 and in between them. Also avoid collisions with every cube apart from cube_2",
+  "open gripper"
+])
+
 objective_mock_plan = Plan(tasks=[
   "move the gripper above cube_4",
   "move gripper to the position of cube_4",
