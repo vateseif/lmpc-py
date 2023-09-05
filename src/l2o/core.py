@@ -5,7 +5,7 @@ from abc import abstractmethod
 from langchain.chat_models import ChatOpenAI
 
 # GPT4 api key
-os.environ["OPENAI_API_KEY"] = open(os.path.dirname(__file__) + '/keys/gpt4.key', 'r').readline().rstrip()
+os.environ["OPENAI_API_KEY"] = open(os.path.dirname(__file__) + '/keys/gpt_seamless.key', 'r').readline().rstrip()
 
 
 class AbstractLLMConfig:
