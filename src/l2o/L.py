@@ -31,9 +31,9 @@ class Sim:
     self.task_counter = 0
 
   def create_plan(self, user_task:str, solve=False): 
-    #self.plan: Plan = self.robot.create_plan(user_task)
-    self.plan: Plan = nmpcMockOptions[self.robot.cfg.controller_type]
-    sleep(5)
+    self.plan: Plan = self.robot.create_plan(user_task)
+    #self.plan: Plan = nmpcMockOptions[self.robot.cfg.controller_type]
+    #sleep(5)
     print(f"\33[92m {self.plan.tasks} \033[0m \n")
     if solve:
       for _ in self.plan.tasks:
