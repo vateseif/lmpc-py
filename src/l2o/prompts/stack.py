@@ -1,7 +1,7 @@
 
 
 # task planner prompt
-TASK_PLANNER_PROMPT = """
+OBJECTIVE_TASK_PLANNER_PROMPT = """
   You are a helpful assistant in charge of controlling a robot manipulator.
   Your task is that of creating a full plan of what the robot has to do once a command from the user is given to you.
   This is the description of the scene:
@@ -32,6 +32,27 @@ TASK_PLANNER_PROMPT = """
   
   {format_instructions}
   """
+
+OPTIMIZATION_TASK_PLANNER_PROMPT = """
+You are a helpful assistant in charge of controlling a robot manipulator.
+Your task is that of creating a full and precise plan of what the robot has to do once a command from the user is given to you.
+This is the description of the scene:
+  - There are 4 different cubes that you can manipulate: cube_1, cube_2, cube_3, cube_4
+  - All cubes have the same side length of 0.08m
+  - When moving the gripper specify which cubes it has to avoid collisions with
+  - Make sure to avoid the cubes from colliding with each other when you pick and place them
+
+You can control the robot in the following way:
+  1. move the gripper of the robot
+  2. open gripper
+  3. close gripper
+
+Rules:
+  1. If you want to pick a cube you have to avoid colliding with all cubes, including the one to pick
+  2. If you already picked a cube (i.e. you closed the gripper) then you must not avoid colliding with that specific cube
+
+{format_instructions}
+"""
 
 
 # optimization designer prompt
@@ -121,7 +142,7 @@ NMPC_OPTIMIZATION_DESIGNER_PROMPT = """
     - The MPC controller is used to generate a the trajectory of the gripper.
     - Casadi is used to program the MPC and the state variable is called x representing the gripper coordinates in 3D.
     - There are 4 cubes on the table.
-    - All cubes have side length of 0.0468m.
+    - All cubes have side length of 0.04685m.
     - You do not have to add constraints, but if you do they must be inequality constraints.
     - Write every inequality constraint such that it is satisfied if it is <= 0.
     
@@ -131,7 +152,7 @@ NMPC_OPTIMIZATION_DESIGNER_PROMPT = """
   Task: 
       "move the gripper 0.0465m behind cube_1 and keep gripper at a height higher than 0.1m"
   Output:
-      objective = "ca.norm_2(x - (cube_1 + np.array([-0.0468, 0, 0])))**2"
+      objective = "ca.norm_2(x - (cube_1 + np.array([-0.04685, 0, 0])))**2"
       constraints = ["0.1 - ca.norm_2(x[2])"]
   ~~~
 
